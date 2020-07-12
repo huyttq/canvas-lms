@@ -29,6 +29,14 @@ module Canvas
     # as the shim, but we have several other classes actually inside
     # lib/canvas/security/*.rb that need the existing module structure,
     # so method_missing works better at the moment.
+  def self.whitelist_ips
+    @whitelist_ips ||= begin
+        res = config && config['whitelist_ips']
+        raise('whitelist_ips required, see config/security.yml') unless res
+        res
+      end
+  end
+
     class << self
       def method_missing(m, *args, &block)
         CanvasSecurity.send(m, *args, &block)
