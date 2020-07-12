@@ -2797,4 +2797,26 @@ class ApplicationController < ActionController::Base
     STUDENT_VIEW_PAGES.key?(controller_action) && (STUDENT_VIEW_PAGES[controller_action].nil? || !@context.tab_hidden?(STUDENT_VIEW_PAGES[controller_action]))
   end
   helper_method :show_student_view_button?
+  
+  def is_ip_whitelisted?
+    return true if ::Rails.env.dev? || ::Rails.env.test?
+    Canvas::Security.whitelist_ips.include? request.remote_ip
+  end
+
+  def check_whitelist_ips
+    return if ::Rails.env.dev? || ::Rails.env.test?
+
+    msg = "You need to be in our office in order to submit"
+    unless is_ip_whitelisted?
+      respond_to do |format|
+        format.html {
+          flash[:error] = t('errors.can_not_submit_assignment', msg)
+          render 'shared/errors/403_message', status: :forbidden, formats: [:html], locals: { message: msg }
+        }
+        format.json {
+          render :json => { :message => msg }
+        }
+      end
+    end
+  end
 end
