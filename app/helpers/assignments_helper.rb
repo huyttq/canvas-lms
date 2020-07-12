@@ -67,16 +67,18 @@ module AssignmentsHelper
     assignment.grants_right?(user, :update)
   end
 
-  def assignment_submission_button(assignment, user, user_submission)
+  def assignment_submission_button(assignment, user, user_submission, is_ip_whitelisted)
     if assignment.expects_submission? && can_do(assignment, user, :submit)
       submit_text = user_submission.try(:has_submission?) ? I18n.t("New Attempt") : I18n.t("Start Assignment")
       late = user_submission.try(:late?) ? "late" : ""
       options = {
         type: 'button',
         class: "Button Button--primary submit_assignment_link #{late}",
-        disabled: user_submission && user_submission.attempts_left == 0
+        disabled: user_submission && (user_submission.attempts_left == 0 || !is_ip_whitelisted)
       }
-      content_tag('button', submit_text, options)
+      tags = content_tag('button', submit_text, options)
+      tags << content_tag('p', I18n.t("You need to be in our office in order to submit"), {class: "alert-error"}) unless is_ip_whitelisted
+      tags
     end
   end
 
