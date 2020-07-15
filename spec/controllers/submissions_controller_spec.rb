@@ -497,7 +497,7 @@ describe SubmissionsController do
         it "redirects with confetti" do
           post 'create', params: {:course_id => @course.id, :assignment_id => @assignment.id, :submission => {:submission_type => "online_url", :url => "url"}}
           expect(response).to be_redirect
-          expect(response).to redirect_to(course_assignment_url(@course, @assignment, :confetti => true))
+          expect(response).to redirect_to(/[\?&]confetti=true/)
         end
 
         context "confetti_for_assignments flag is disabled" do
@@ -512,7 +512,7 @@ describe SubmissionsController do
               :submission => {:submission_type => "online_url", :url => "url"}
             }
             expect(response).to be_redirect
-            expect(response).to_not redirect_to(course_assignment_url(@course, @assignment, :confetti => true))
+            expect(response).to_not redirect_to(/[\?&]confetti=true/)
           end
         end
       end
@@ -526,7 +526,7 @@ describe SubmissionsController do
         it "redirects without confetti" do
           post 'create', params: {:course_id => @course.id, :assignment_id => @assignment.id, :submission => {:submission_type => "online_url", :url => "url"}}
           expect(response).to be_redirect
-          expect(response).to_not redirect_to(course_assignment_url(@course, @assignment, :confetti => true))
+          expect(response).to_not redirect_to(/[\?&]confetti=true/)
         end
       end
 
@@ -539,7 +539,7 @@ describe SubmissionsController do
         it "redirects with confetti" do
           post 'create', params: {:course_id => @course.id, :assignment_id => @assignment.id, :submission => {:submission_type => "online_url", :url => "url"}}
           expect(response).to be_redirect
-          expect(response).to redirect_to(course_assignment_url(@course, @assignment, :confetti => true))
+          expect(response).to redirect_to(/[\?&]confetti=true/)
         end
 
         context "confetti_for_assignments flag is disabled" do
@@ -554,9 +554,63 @@ describe SubmissionsController do
               :submission => {:submission_type => "online_url", :url => "url"}
             }
             expect(response).to be_redirect
-            expect(response).to_not redirect_to(course_assignment_url(@course, @assignment, :confetti => true))
+            expect(response).to_not redirect_to(/[\?&]confetti=true/)
           end
         end
+      end
+    end
+
+    describe "tardiness tracker" do
+      let(:course) { course_with_student_logged_in(active_all: true) && @course }
+
+      it "redirects with submitted=0 when assignment has no due date" do
+        assignment = course.assignments.create!(
+          title: "some assignment",
+          submission_types: "online_url"
+        )
+
+        post 'create', params: {
+          course_id: course.id,
+          assignment_id: assignment.id,
+          submission: { submission_type: "online_url", url: "url" }
+        }
+
+        expect(response).to be_redirect
+        expect(response).to redirect_to(/[\?&]submitted=0/)
+      end
+
+      it "redirects with submitted=1 when submission is made on time" do
+        assignment = course.assignments.create!(
+          title: "some assignment",
+          submission_types: "online_url",
+          due_at: 5.days.from_now
+        )
+
+        post 'create', params: {
+          course_id: course.id,
+          assignment_id: assignment.id,
+          submission: { submission_type: "online_url", url: "url" }
+        }
+
+        expect(response).to be_redirect
+        expect(response).to redirect_to(/[\?&]submitted=1/)
+      end
+
+      it "redirects with submitted=2 when submission is late" do
+        assignment = course.assignments.create!(
+          title: "some assignment",
+          submission_types: "online_url",
+          due_at: 1.days.ago
+        )
+
+        post 'create', params: {
+          course_id: course.id,
+          assignment_id: assignment.id,
+          submission: { submission_type: "online_url", url: "url" }
+        }
+
+        expect(response).to be_redirect
+        expect(response).to redirect_to(/[\?&]submitted=2/)
       end
     end
   end
@@ -1229,44 +1283,6 @@ describe SubmissionsController do
         get :audit_events, params: quiz_audit_params, format: :json
         expect(returned_quizzes).to include(hash_including({ "id" => quiz.id, "role" => "grader" }))
       end
-    end
-  end
-
-  describe "copy_attachments_to_submissions_folder" do
-    before(:once) do
-      course_with_student
-      @course.account.enable_service(:avatars)
-      attachment_model(context: @student)
-    end
-
-    it "copies a user attachment into the user's submissions folder" do
-      atts = SubmissionsController.copy_attachments_to_submissions_folder(@course, [@attachment])
-      expect(atts.length).to eq 1
-      expect(atts[0]).not_to eq @attachment
-      expect(atts[0].folder).to eq @student.submissions_folder(@course)
-    end
-
-    it "leaves files already in submissions folders alone" do
-      @attachment.folder = @student.submissions_folder(@course)
-      @attachment.save!
-      atts = SubmissionsController.copy_attachments_to_submissions_folder(@course, [@attachment])
-      expect(atts).to eq [@attachment]
-    end
-
-    it "copies a group attachment into the group submission folder" do
-      group_model(context: @course)
-      attachment_model(context: @group)
-      atts = SubmissionsController.copy_attachments_to_submissions_folder(@course, [@attachment])
-      expect(atts.length).to eq 1
-      expect(atts[0]).not_to eq @attachment
-      expect(atts[0].folder).to eq @group.submissions_folder
-    end
-
-    it "leaves files in non user/group context alone" do
-      assignment_model(context: @course)
-      weird_file = @assignment.attachments.create! display_name: 'blah', uploaded_data: default_uploaded_data
-      atts = SubmissionsController.copy_attachments_to_submissions_folder(@course, [weird_file])
-      expect(atts).to eq [weird_file]
     end
   end
 end

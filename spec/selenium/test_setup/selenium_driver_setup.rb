@@ -19,6 +19,7 @@ require "fileutils"
 require 'webdrivers/chromedriver'
 require_relative "common_helper_methods/custom_alert_actions"
 require_relative 'common_helper_methods/custom_screen_actions'
+require_relative 'patches/selenium/webdriver/remote/w3c/bridge.rb'
 
 # WebDriver uses port 7054 (the "locking port") as a mutex to ensure
 # that we don't launch two Firefox instances at the same time. Each
@@ -272,7 +273,10 @@ module SeleniumDriverSetup
 
     def ruby_chrome_driver
       puts "Thread: provisioning local chrome driver"
-      Webdrivers::Chromedriver.required_version = (CONFIG[:chromedriver_version] || "80.0.3987.106")
+      # in your selenium.yml you can define a different chromedriver version
+      # by adding 'chromedriver_version: <version>' for the version you want.
+      # otherwise this will use the default version matching what is used in docker.
+      Webdrivers::Chromedriver.required_version = (CONFIG[:chromedriver_version] || "83.0.4103.39")
       chrome_options = Selenium::WebDriver::Chrome::Options.new
       # put `auto_open_devtools: true` in your selenium.yml if you want to have
       # the chrome dev tools open by default by selenium
@@ -311,8 +315,11 @@ module SeleniumDriverSetup
         # TODO: options for firefox driver
       when :chrome
         caps = Selenium::WebDriver::Remote::Capabilities.chrome
-        caps['chromeOptions'] = {
+        caps['goog:chromeOptions'] = {
           args: %w[disable-dev-shm-usage no-sandbox start-maximized]
+        }
+        caps['goog:loggingPrefs'] = {
+          browser: 'ALL'
         }
       when :edge
         # TODO: options for edge driver

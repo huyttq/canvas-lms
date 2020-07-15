@@ -38,7 +38,7 @@ describe('contentInsertion', () => {
       },
       selection: {
         getNode: () => {
-          return null
+          return editor.selectionContent ? 'p' : null
         },
         getContent: () => {
           return editor.selectionContent
@@ -59,24 +59,55 @@ describe('contentInsertion', () => {
         decode: input => {
           return input
         },
+        encode: input => input,
+        setAttribs: (elem, attrs) => {
+          if (elem?.nodeType === 1) {
+            // this is an HTMLElement
+            Object.keys(attrs)
+              .sort()
+              .forEach(a => {
+                if (attrs[a]) {
+                  elem.setAttribute(a, attrs[a])
+                }
+              })
+          }
+          return elem
+        },
         $: () => {
           return {
             is: () => {
               return false
             }
           }
+        },
+        createHTML: (tag, attrs, text) => {
+          const elem = document.createElement(tag)
+          editor.dom.setAttribs(elem, attrs)
+          elem.innerHTML = text
+          return elem.outerHTML
         }
+      },
+      undoManager: {
+        add: () => {}
       },
       focus: () => {},
       insertContent: content => {
-        editor.content += content
+        if (editor.selection.getContent()) {
+          editor.content = editor.content.replace(editor.selection.getContent(), content)
+        } else {
+          editor.content += content
+        }
       },
       iframeElement: {
         getBoundingClientRect: () => {
           return {left: 0, top: 0, bottom: 0, right: 0}
         }
       },
-      execCommand: jest.fn()
+      execCommand: jest.fn((cmd, ui, opts) => {
+        if (cmd === 'mceInsertLink') {
+          editor.content = editor.dom.createHTML('a', opts, editor.selectionContent)
+        }
+      })
     }
   })
 
@@ -104,7 +135,7 @@ describe('contentInsertion', () => {
       link.embed = {type: 'image'}
       contentInsertion.insertLink(editor, link)
       expect(editor.content).toEqual(
-        '<a href="/some/path" title="Here Be Links" class="instructure_file_link instructure_image_thumbnail">Click On Me</a>'
+        '<a class="instructure_file_link instructure_image_thumbnail" href="/some/path" title="Here Be Links">Click On Me</a>'
       )
     })
 
@@ -112,7 +143,7 @@ describe('contentInsertion', () => {
       link.embed = {type: 'scribd'}
       contentInsertion.insertLink(editor, link)
       expect(editor.content).toEqual(
-        '<a href="/some/path" title="Here Be Links" class="instructure_file_link instructure_scribd_file">Click On Me</a>'
+        '<a class="instructure_file_link instructure_scribd_file" href="/some/path" title="Here Be Links">Click On Me</a>'
       )
     })
 
@@ -121,46 +152,40 @@ describe('contentInsertion', () => {
       link.class = 'instructure_file_link foo'
       contentInsertion.insertLink(editor, link)
       expect(editor.content).toEqual(
-        '<a href="/some/path" title="Here Be Links" data-canvas-previewable="true" class="instructure_file_link foo">Click On Me</a>'
+        '<a class="instructure_file_link foo" data-canvas-previewable="true" href="/some/path" title="Here Be Links">Click On Me</a>'
       )
     })
 
     it('respects the current selection building the link by delegating to tinymce', () => {
-      editor.execCommand = jest.fn()
       editor.selection.setContent('link me')
       contentInsertion.insertLink(editor, link)
-      expect(editor.execCommand).toHaveBeenCalled()
-      expect(editor.execCommand.mock.calls[0][0]).toBe('mceInsertLink')
-      // this isn't really a very good test, but w/o a real tinymce editor
-      // it's the best we can do. Will cover this case with a selenium spec
+      expect(editor.execCommand).toHaveBeenCalledWith('mceInsertLink', false, expect.any(Object))
     })
 
     it('cleans a url with no protocol when linking the current selection', () => {
-      editor.execCommand = jest.fn()
       editor.selection.setContent('link me')
       link.href = 'www.google.com'
       contentInsertion.insertLink(editor, link)
-      expect(editor.execCommand).toHaveBeenCalled()
-      expect(editor.execCommand.mock.calls[0][0]).toBe('mceInsertLink')
-      expect(editor.execCommand.mock.calls[0][2].href).toBe('http://www.google.com')
+      expect(editor.content).toEqual(
+        '<a href="http://www.google.com" title="Here Be Links">link me</a>'
+      )
     })
 
-    it('cleans a url with no protocol when editing an existing link', () => {
+    it('cleans a url with no protocol when editing an existing, selected link', () => {
       link.href = 'www.google.com'
       editor.selection.setContent('link me')
-      const anchor = document.createElement('div')
+      const anchor = document.createElement('a')
       anchor.setAttribute('href', 'http://example.com')
-      const textNode = document.createTextNode('edit me')
+      const textNode = document.createTextNode('link me')
       anchor.appendChild(textNode)
       editor.selection.getNode = () => textNode
       editor.dom.getParent = () => anchor
       editor.selection.select = () => {}
-      contentInsertion.insertLink(editor, link)
-      expect(editor.execCommand).toHaveBeenCalledWith(
-        'mceInsertLink',
-        null,
-        expect.objectContaining({href: 'http://www.google.com'})
-      )
+      contentInsertion.insertLink(editor, link, 'Click On Me')
+      // insertLink edits the <a> in-place, so
+      // check that the anchor has been updated as expected
+      expect(anchor.getAttribute('href')).toEqual('http://www.google.com')
+      expect(anchor.innerText).toEqual('Click On Me')
     })
 
     it('can use url if no href', () => {
@@ -224,17 +249,13 @@ describe('contentInsertion', () => {
 
     it('builds image html from image data', () => {
       contentInsertion.insertImage(editor, image)
-      expect(editor.content).toEqual(
-        '<img alt="Here Be Images" src="/some/path" style="max-width:320px;max-height:320px"/>'
-      )
+      expect(editor.content).toEqual('<img alt="Here Be Images" src="/some/path"/>')
     })
 
     it('uses url if no href', () => {
       image.href = undefined
       contentInsertion.insertImage(editor, image)
-      expect(editor.content).toEqual(
-        '<img alt="Here Be Images" src="/other/path" style="max-width:320px;max-height:320px"/>'
-      )
+      expect(editor.content).toEqual('<img alt="Here Be Images" src="/other/path"/>')
     })
 
     it('builds linked image html from linked image data', () => {
@@ -359,7 +380,7 @@ describe('contentInsertion', () => {
       const audio = audioFromUpload()
       const result = contentInsertion.insertAudio(editor, audio)
       expect(editor.insertContent).toHaveBeenCalledWith(
-        '<iframe data-media-id="m-media-id" data-media-type="audio" src="/url/to/m-media-id?type=audio" style="width:300px;height:2.813rem;display:inline-block" title="Audio player for filename.mp3"></iframe>'
+        '<iframe data-media-id="m-media-id" data-media-type="audio" src="/url/to/m-media-id?type=audio" style="width:320px;height:14.25rem;display:inline-block" title="Audio player for filename.mp3"></iframe>'
       )
       expect(result).toEqual('the inserted iframe')
     })
@@ -369,7 +390,7 @@ describe('contentInsertion', () => {
       const audio = audioFromTray()
       const result = contentInsertion.insertAudio(editor, audio)
       expect(editor.insertContent).toHaveBeenCalledWith(
-        '<iframe data-media-id="29" data-media-type="audio" src="/media_objects_iframe?mediahref=url%2Fto%2Fcourse%2Ffile&amp;type=audio" style="width:300px;height:2.813rem;display:inline-block" title="Audio player for filename.mp3"></iframe>'
+        '<iframe data-media-id="29" data-media-type="audio" src="/media_objects_iframe?mediahref=url%2Fto%2Fcourse%2Ffile&amp;type=audio" style="width:320px;height:14.25rem;display:inline-block" title="Audio player for filename.mp3"></iframe>'
       )
       expect(result).toEqual('the inserted iframe')
     })

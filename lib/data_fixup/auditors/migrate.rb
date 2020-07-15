@@ -21,7 +21,7 @@ module DataFixup::Auditors
   module Migrate
     class MissingRecordError < StandardError; end
 
-    DEFAULT_BATCH_SIZE = 100
+    DEFAULT_BATCH_SIZE = 10
     DEFAULT_REPAIR_BATCH_SIZE = 1000
 
     module AuditorWorker
@@ -118,18 +118,10 @@ module DataFixup::Auditors
         ar_attributes_list.reject{|h| existing_uuids.include?(h['uuid']) }
       end
 
-      def bulk_insert_auditor_recs(auditor_ar_type, attrs_lists)
-        partition_groups = attrs_lists.group_by{|a| auditor_ar_type.infer_partition_table_name(a) }
-        partition_groups.each do |partition_name, partition_attrs|
+      def migrate_in_pages(ids_collection, stream_type, auditor_ar_type, batch_size=nil)
+        batch_size ||= Setting.get('auditors_migration_batch_size', DEFAULT_BATCH_SIZE).to_i
           uuids = partition_attrs.map{|h| h['uuid']}
           Rails.logger.info("INSERTING INTO #{partition_name} #{uuids.size} IDs (#{uuids.join(',')})")
-          auditor_ar_type.transaction do
-            auditor_ar_type.connection.bulk_insert(partition_name, partition_attrs)
-          end
-        end
-      end
-
-      def migrate_in_pages(ids_collection, stream_type, auditor_ar_type, batch_size=DEFAULT_BATCH_SIZE)
         next_page = 1
         until next_page.nil?
           page_args = { page: next_page, per_page: batch_size}
@@ -140,12 +132,12 @@ module DataFixup::Auditors
             auditor_ar_type.ar_attributes_from_event_stream(rec)
           end
           begin
-            bulk_insert_auditor_recs(auditor_ar_type, ar_attributes_list)
+            auditor_ar_type.bulk_insert(ar_attributes_list)
           rescue ActiveRecord::RecordNotUnique, ActiveRecord::InvalidForeignKey
             # this gets messy if we act specifically; let's just apply both remedies
             new_attrs_list = filter_for_idempotency(ar_attributes_list, auditor_ar_type)
-            new_attrs_list = filter_dead_foreign_keys(new_attrs_list)
-            bulk_insert_auditor_recs(auditor_ar_type, new_attrs_list) if new_attrs_list.size > 0
+            new_attrs_list = filter_dead_foreign_keys(new_attrs_list) if new_attrs_list.size > 0
+            auditor_ar_type.bulk_insert(new_attrs_list) if new_attrs_list.size > 0
           end
           next_page = auditor_id_recs.next_page
         end
@@ -160,7 +152,8 @@ module DataFixup::Auditors
       # that subset to insert.  This makes it much faster for traversing a large dataset
       # when some or most of the records are filled in already.  Obviously it would be somewhat
       # slower than the migrate pass if there were NO records migrated.
-      def repair_in_pages(ids_collection, stream_type, auditor_ar_type, batch_size=DEFAULT_REPAIR_BATCH_SIZE)
+      def repair_in_pages(ids_collection, stream_type, auditor_ar_type, batch_size=nil)
+        batch_size ||= Setting.get('auditors_migration_batch_size', DEFAULT_BATCH_SIZE).to_i
         next_page = 1
         until next_page.nil?
           page_args = { page: next_page, per_page: batch_size}
@@ -174,19 +167,20 @@ module DataFixup::Auditors
               auditor_ar_type.ar_attributes_from_event_stream(rec)
             end
             begin
-              bulk_insert_auditor_recs(auditor_ar_type, ar_attributes_list)
+              auditor_ar_type.bulk_insert(ar_attributes_list)
             rescue ActiveRecord::RecordNotUnique, ActiveRecord::InvalidForeignKey
               # this gets messy if we act specifically; let's just apply both remedies
               new_attrs_list = filter_for_idempotency(ar_attributes_list, auditor_ar_type)
-              new_attrs_list = filter_dead_foreign_keys(new_attrs_list)
-              bulk_insert_auditor_recs(auditor_ar_type, new_attrs_list) if new_attrs_list.size > 0
+              new_attrs_list = filter_dead_foreign_keys(new_attrs_list) if new_attrs_list.size > 0
+              auditor_ar_type.bulk_insert(new_attrs_list) if new_attrs_list.size > 0
             end
           end
           next_page = auditor_id_recs.next_page
         end
       end
 
-      def audit_in_pages(ids_collection, auditor_ar_type, batch_size=DEFAULT_BATCH_SIZE)
+      def audit_in_pages(ids_collection, auditor_ar_type, batch_size=nil)
+        batch_size ||= Setting.get('auditors_migration_batch_size', DEFAULT_BATCH_SIZE).to_i
         @audit_results ||= {
           'uuid_count' => 0,
           'failure_count' => 0,
@@ -383,6 +377,12 @@ module DataFixup::Auditors
         stream_map[auditor_type]
       end
 
+      def existing_user_ids_from(user_ids)
+        uids = user_ids.compact.uniq
+        return [] unless uids.size > 0
+        User.where("id IN (#{uids.join(",")})").pluck(:id)
+      end
+
       def auditor_type
         raise "NOT IMPLEMENTED"
       end
@@ -435,9 +435,10 @@ module DataFixup::Auditors
 
       def filter_dead_foreign_keys(attrs_list)
         user_ids = attrs_list.map{|a| a['user_id'] }
-        pseudonym_ids = attrs_list.map{|a| a['pseudonym_id'] }
-        existing_user_ids = User.where(id: user_ids).pluck(:id)
-        existing_pseud_ids = Pseudonym.where(id: pseudonym_ids).pluck(:id)
+        existing_user_ids = existing_user_ids_from(user_ids)
+        pseudonym_ids = attrs_list.map{|a| a['pseudonym_id'] }.compact.uniq
+        existing_pseud_ids = []
+        existing_pseud_ids = Pseudonym.where(id: pseudonym_ids).pluck(:id) if pseudonym_ids.size > 0
         missing_uids = user_ids - existing_user_ids
         missing_pids = pseudonym_ids - existing_pseud_ids
         new_attrs_list = attrs_list.reject{|h| missing_uids.include?(h['user_id']) }
@@ -470,9 +471,14 @@ module DataFixup::Auditors
 
       def filter_dead_foreign_keys(attrs_list)
         user_ids = attrs_list.map{|a| a['user_id'] }
-        existing_user_ids = User.where(id: user_ids).pluck(:id)
+        existing_user_ids = existing_user_ids_from(attrs_list.map{|a| a['user_id'] })
         missing_uids = user_ids - existing_user_ids
-        attrs_list.reject {|h| missing_uids.include?(h['user_id']) }
+        new_attrs_list = attrs_list.reject {|h| missing_uids.include?(h['user_id']) }
+        course_ids = new_attrs_list.map{|a| a['course_id'] }.compact.uniq
+        existing_course_ids = []
+        existing_course_ids = Course.where(id: course_ids).pluck(:id) if course_ids.size > 0
+        missing_cids = course_ids - existing_course_ids
+        new_attrs_list.reject {|h| missing_cids.include?(h['course_id']) }
       end
     end
 
@@ -524,8 +530,8 @@ module DataFixup::Auditors
       def filter_dead_foreign_keys(attrs_list)
         student_ids = attrs_list.map{|a| a['student_id'] }
         grader_ids = attrs_list.map{|a| a['grader_id'] }
-        user_ids = (student_ids + grader_ids).uniq
-        existing_user_ids = User.where(id: user_ids).pluck(:id)
+        user_ids = (student_ids + grader_ids).compact
+        existing_user_ids = existing_user_ids_from(user_ids)
         missing_uids = user_ids - existing_user_ids
         filtered_attrs_list = attrs_list.reject do |h|
           missing_uids.include?(h['student_id']) || missing_uids.include?(h['grader_id'])
@@ -824,8 +830,8 @@ module DataFixup::Auditors
 
       def slim_accounts
         return @_accounts if @_accounts
-        root_account_ids = Account.root_accounts.active.pluck(:id)
-        @_accounts = Account.active.where(
+        root_account_ids = Account.root_accounts.active.non_shadow.pluck(:id)
+        @_accounts = Account.active.non_shadow.where(
           "root_account_id IS NULL OR root_account_id IN (?)", root_account_ids
         ).select(:id, :root_account_id)
       end

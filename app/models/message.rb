@@ -601,7 +601,7 @@ class Message < ActiveRecord::Base
     end
 
     check_acct = root_account || user&.account || Account.site_admin
-    if path_type == 'sms' && !check_acct.settings[:sms_allowed] && check_acct.feature_enabled?(:deprecate_sms)
+    if path_type == 'sms' && !check_acct.settings[:sms_allowed] && Account.site_admin.feature_enabled?(:deprecate_sms)
       if Notification.types_to_send_in_sms(check_acct).exclude?(notification_name)
         InstStatsd::Statsd.increment("message.skip.#{path_type}.#{notification_name}",
                                      short_stat: 'message.skip',
@@ -638,9 +638,14 @@ class Message < ActiveRecord::Base
   def enqueue_to_sqs
     targets = notification_targets
     if targets.empty?
+      # Log no_targets_specified error to DataDog
+      InstStatsd::Statsd.increment("message.no_targets_specified",
+                                   short_stat: 'message.no_targets_specified',
+                                   tags: {path_type: path_type})
+
       self.transmission_errors = "No notification targets specified"
       self.set_transmission_error
-    else
+  else
       targets.each do |target|
         Services::NotificationService.process(
           notification_service_id,

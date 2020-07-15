@@ -148,7 +148,9 @@ class GradebooksController < ApplicationController
       post_policies_enabled: @context.post_policies_enabled?
     }
 
-    if @context.feature_enabled?(:final_grades_override)
+    # This really means "if the final grade override feature flag is enabled AND
+    # the context in question has enabled the setting in the gradebook"
+    if @context.allow_final_grade_override?
       total_score = if grading_periods? && !view_all_grading_periods?
                       @presenter.student_enrollment.find_score(grading_period_id: @current_grading_period_id)
                     else
@@ -886,7 +888,8 @@ class GradebooksController < ApplicationController
           assignment_title: @assignment.title,
           rubric: rubric ? rubric_json(rubric, @current_user, session, style: 'full') : nil,
           nonScoringRubrics: @domain_root_account.feature_enabled?(:non_scoring_rubrics),
-          outcome_extra_credit_enabled: @context.feature_enabled?(:outcome_extra_credit),
+          outcome_extra_credit_enabled: @context.feature_enabled?(:outcome_extra_credit), # for outcome-based rubrics
+          outcome_proficiency: outcome_proficiency, # for outcome-based rubrics
           group_comments_per_attempt: @assignment.a2_enabled?,
           can_comment_on_submission: @can_comment_on_submission,
           show_help_menu_item: show_help_link?,

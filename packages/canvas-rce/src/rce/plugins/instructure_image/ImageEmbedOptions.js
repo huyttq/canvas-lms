@@ -21,6 +21,7 @@ import {scaleForHeight, scaleForWidth} from '../shared/DimensionUtils'
 
 export const MIN_HEIGHT = 10
 export const MIN_WIDTH = 10
+export const MIN_WIDTH_VIDEO = 320
 
 export const SMALL = 'small'
 export const MEDIUM = 'medium'
@@ -30,7 +31,6 @@ export const CUSTOM = 'custom'
 
 export const imageSizes = [SMALL, MEDIUM, LARGE, EXTRA_LARGE, CUSTOM]
 export const videoSizes = [MEDIUM, LARGE, EXTRA_LARGE, CUSTOM]
-export const defaultImageSize = 320
 
 const sizeByMaximumDimension = {
   200: SMALL,
@@ -64,7 +64,9 @@ export function fromImageEmbed($element) {
     altText,
     appliedHeight: parsedOrNull($element, 'height'),
     appliedWidth: parsedOrNull($element, 'width'),
-    isDecorativeImage: altText === '' && $element.getAttribute('data-is-decorative') === 'true',
+    isDecorativeImage:
+      $element.getAttribute('data-is-decorative') === 'true' ||
+      $element.getAttribute('role') === 'presentation',
     naturalHeight: $element.naturalHeight,
     naturalWidth: $element.naturalWidth,
     url: $element.src

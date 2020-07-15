@@ -16,12 +16,15 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, {Suspense, useState} from 'react'
+import React, {Suspense, useEffect, useState} from 'react'
+import ReactDOM from 'react-dom'
 import {arrayOf, func, object, oneOf, oneOfType, string} from 'prop-types'
 import {Modal} from '@instructure/ui-overlays'
 import {Button, CloseButton} from '@instructure/ui-buttons'
-import {Heading, Spinner} from '@instructure/ui-elements'
+import {Heading} from '@instructure/ui-elements'
+import {Spinner} from '@instructure/ui-spinner'
 import {Tabs} from '@instructure/ui-tabs'
+import {px} from '@instructure/ui-utils'
 import formatMessage from '../../../../format-message'
 import indicatorRegion from '../../../indicatorRegion'
 import {isImage, isAudioOrVideo} from '../fileTypeUtils'
@@ -94,10 +97,13 @@ export const handleSubmit = (
   afterInsert()
 }
 
-function shouldBeDisabled({fileUrl, theFile, unsplashData}, selectedPanel) {
+function shouldBeDisabled({fileUrl, theFile, unsplashData, error}, selectedPanel) {
+  if (error) {
+    return true
+  }
   switch (selectedPanel) {
     case 'COMPUTER':
-      return !theFile
+      return !theFile || theFile.error
     case 'UNSPLASH':
       return !unsplashData.id || !unsplashData.url
     case 'URL':
@@ -117,10 +123,13 @@ export function UploadFile({
   onSubmit = handleSubmit
 }) {
   const [theFile, setFile] = useState(null)
-  const [hasUploadedFile, setHasUploadedFile] = useState(false)
+  const [error, setError] = useState(null)
   const [fileUrl, setFileUrl] = useState('')
   const [selectedPanel, setSelectedPanel] = useState(panels[0])
   const [unsplashData, setUnsplashData] = useState({id: null, url: null})
+  const [modalBodyWidth, setModalBodyWidth] = useState(undefined)
+  const [modalBodyHeight, setModalBodyHeight] = useState(undefined)
+  const bodyRef = React.createRef()
 
   trayProps = trayProps || Bridge.trayProps.get(editor)
 
@@ -131,6 +140,22 @@ export function UploadFile({
       refreshToken: trayProps.refreshToken,
       host: trayProps.host
     })
+
+  // the panels get rendered inside tab panels. it's difficult for them to
+  // figure out how much space they have to work with, and I'd like the previews
+  // not to trigger scrollbars in the modal's body. Get the Modal.Body's size
+  // and to the ComputerPanel how much space it has so it can render the file preview
+  useEffect(() => {
+    if (bodyRef.current) {
+      // eslint-disable-next-line react/no-find-dom-node
+      const thebody = ReactDOM.findDOMNode(bodyRef.current)
+      const sz = thebody.getBoundingClientRect()
+      sz.height -= px('3rem') // leave room for the tabs
+      setModalBodyWidth(sz.width)
+      setModalBodyHeight(sz.height)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bodyRef.current, modalBodyHeight, modalBodyWidth])
 
   function renderLoading() {
     return formatMessage('Loading')
@@ -153,10 +178,10 @@ export function UploadFile({
                   editor={editor}
                   theFile={theFile}
                   setFile={setFile}
-                  hasUploadedFile={hasUploadedFile}
-                  setHasUploadedFile={setHasUploadedFile}
+                  setError={setError}
                   label={label}
                   accept={accept}
+                  bounds={{width: modalBodyWidth, height: modalBodyHeight}}
                 />
               </Suspense>
             </Tabs.Panel>
@@ -200,7 +225,7 @@ export function UploadFile({
     })
   }
 
-  const disabledSubmit = shouldBeDisabled({fileUrl, theFile, unsplashData}, selectedPanel)
+  const disabledSubmit = shouldBeDisabled({fileUrl, theFile, unsplashData, error}, selectedPanel)
 
   return (
     <StoreProvider {...trayProps}>
@@ -237,7 +262,7 @@ export function UploadFile({
             </CloseButton>
             <Heading>{label}</Heading>
           </Modal.Header>
-          <Modal.Body>
+          <Modal.Body ref={bodyRef}>
             <Tabs onRequestTabChange={(event, {index}) => setSelectedPanel(panels[index])}>
               {renderTabs()}
             </Tabs>

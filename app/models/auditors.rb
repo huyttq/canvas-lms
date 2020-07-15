@@ -27,7 +27,7 @@ module Auditors
         end
 
         stream.on_error do |operation, record, exception|
-          next unless Canvas::Cassandra::DatabaseBuilder.configured?(:auditors)
+          next unless Auditors.configured?
           Canvas::EventStreamLogger.error('AUDITOR', identifier, operation, record.to_json, exception.message.to_s)
         end
       end
@@ -35,6 +35,29 @@ module Auditors
 
     def logger
       Rails.logger
+    end
+
+    def read_stream_options(options)
+      return { backend_strategy: :cassandra }.merge(options) if Auditors.read_from_cassandra?
+      return { backend_strategy: :active_record }.merge(options) if Auditors.read_from_postgres?
+      # Assume cassandra by default until transition complete
+      { backend_strategy: :cassandra }.merge(options)
+    end
+
+    def backend_strategy
+      strategy_value = :cassandra
+      strategy_value = :active_record if read_from_postgres?
+      strategy_value
+    end
+
+    def configured?
+      strategy = backend_strategy
+      if strategy == :cassandra
+        return Canvas::Cassandra::DatabaseBuilder.configured?('auditors')
+      elsif strategy == :active_record
+        return Rails.configuration.database_configuration[Rails.env].present?
+      end
+      raise ArgumentError, "Unknown Auditors Backend Strategy: #{strategy}"
     end
 
     def write_to_cassandra?
@@ -62,7 +85,7 @@ module Auditors
       paths.empty? ? ['cassandra'] : paths
     end
 
-    def config(shard=Shard.current)
+    def config(shard=::Switchman::Shard.current)
       settings = Canvas::DynamicSettings.find(tree: :private, cluster: shard.database_server.id)
       YAML.safe_load(settings['auditors.yml'] || '{}')
     end

@@ -28,9 +28,9 @@ module Canvas
 
     ALLOWED_TYPES = {
       'Account' => %w{account_chain role_overrides global_navigation feature_flags},
-      'Course' => %w{account_associations},
+      'Course' => %w{account_associations conditional_release},
       'User' => %w{enrollments groups account_users todo_list submissions user_services},
-      'Assignment' => %w{availability},
+      'Assignment' => %w{availability conditional_release},
       'Quizzes::Quiz' => %w{availability}
     }.freeze
 
@@ -55,7 +55,7 @@ module Canvas
         module ClassMethods
           def base_cache_register_key_for(id_or_record)
             id = ::Shard.global_id_for(id_or_record)
-            raise "invalid argument for cache clearing #{id}" if id && !id.is_a?(Integer)
+            raise "invalid argument for cache clearing #{id}" if id && !id.is_a?(Integer) unless ::Rails.env.production?
             id && "cache_register/#{self.model_name.cache_key}/#{id}"
           end
 

@@ -31,7 +31,6 @@ class PageView < ActiveRecord::Base
 
   CONTEXT_TYPES = %w{Course Account Group User UserProfile}.freeze
 
-  attr_accessor :generated_by_hand
   attr_accessor :is_update
 
   # note that currently we never query page views from the perspective of the course;
@@ -150,6 +149,7 @@ class PageView < ActiveRecord::Base
   end
 
   EventStream = EventStream::Stream.new do
+    backend_strategy :cassandra
     database -> { Canvas::Cassandra::DatabaseBuilder.from_config(:page_views) }
     table :page_views
     id_column :request_id

@@ -63,7 +63,6 @@ class AssignmentsController < ApplicationController
         set_tutorial_js_env
         set_section_list_js_env if @domain_root_account.feature_enabled?(:assignment_bulk_edit)
         hash = {
-          COURSE_ID: @context.id.to_s,
           WEIGHT_FINAL_GRADES: @context.apply_group_weights?,
           POST_TO_SIS_DEFAULT: @context.account.sis_default_grade_export[:value],
           SIS_INTEGRATION_SETTINGS_ENABLED: sis_integration_settings_enabled,
@@ -649,7 +648,8 @@ class AssignmentsController < ApplicationController
 
       hash[:SUBMISSION_TYPE_SELECTION_TOOLS] =
         @domain_root_account&.feature_enabled?(:submission_type_tool_placement) ?
-        external_tools_display_hashes(:submission_type_selection, @context, [:base_title, :external_url]) : []
+        external_tools_display_hashes(:submission_type_selection, @context,
+          [:base_title, :external_url, :selection_width, :selection_height]) : []
 
       append_sis_data(hash)
       if context.is_a?(Course)

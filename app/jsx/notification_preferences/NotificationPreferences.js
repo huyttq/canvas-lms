@@ -36,38 +36,44 @@ const NotificationPreferences = props => {
   return (
     <Flex direction="column">
       <Flex.Item overflowY="visible">
-        <Heading>
+        <Heading level="h2" as="h1">
           {I18n.t('%{contextType} Notification Settings', {
             contextType: capitalizedContextType
           })}
         </Heading>
       </Flex.Item>
-      <Flex.Item margin="large 0 small 0" padding="xx-small">
-        <Checkbox
-          data-testid="enable-notifications-toggle"
-          label={I18n.t('Enable Notifications')}
-          size="small"
-          variant="toggle"
-          checked={enabled}
-          onChange={() => {
-            setEnabled(!enabled)
-            props.updatePreference({enabled: !enabled})
-          }}
-        />
-      </Flex.Item>
-      <Flex.Item>
-        <Text>
-          {enabled
-            ? I18n.t(
-                'You are currently receiving notifications for this %{contextType}. To disable %{contextType} notifications, use the toggle above.',
-                {contextType: props.contextType}
-              )
-            : I18n.t(
-                'You will not receive any %{contextType} notifications at this time. To enable %{contextType} notifications, use the toggle above.',
-                {contextType: props.contextType}
-              )}
-        </Text>
-      </Flex.Item>
+      {props.contextType === 'course' && (
+        <>
+          <Flex.Item margin="large 0 small 0" padding="xx-small">
+            <Checkbox
+              data-testid="enable-notifications-toggle"
+              label={I18n.t('Enable Notifications for %{contextName}', {
+                contextName: props.contextName
+              })}
+              size="small"
+              variant="toggle"
+              checked={enabled}
+              onChange={() => {
+                setEnabled(!enabled)
+                props.updatePreference({enabled: !enabled})
+              }}
+            />
+          </Flex.Item>
+          <Flex.Item>
+            <Text>
+              {enabled
+                ? I18n.t(
+                    'You are currently receiving notifications for this %{contextType}. To disable %{contextType} notifications, use the toggle above.',
+                    {contextType: props.contextType}
+                  )
+                : I18n.t(
+                    'You will not receive any %{contextType} notifications at this time. To enable %{contextType} notifications, use the toggle above.',
+                    {contextType: props.contextType}
+                  )}
+            </Text>
+          </Flex.Item>
+        </>
+      )}
       {props.contextType === 'account' ||
       ENV.NOTIFICATION_PREFERENCES_OPTIONS?.granular_course_preferences_enabled ? (
         <Flex.Item>
@@ -97,7 +103,8 @@ const NotificationPreferences = props => {
 
 NotificationPreferences.propTypes = {
   contextType: string.isRequired,
-  enabled: bool.isRequired,
+  contextName: string,
+  enabled: bool,
   updatePreference: func.isRequired,
   notificationPreferences: NotificationPreferencesShape
 }

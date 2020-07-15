@@ -68,7 +68,7 @@ describe Auditors::Authentication do
 
       it "doesn't record an error when not configured" do
         allow(Auditors::Authentication::Stream).to receive(:database).and_return(nil)
-        expect(Canvas::Cassandra::DatabaseBuilder).to receive(:configured?).with(:auditors).once.and_return(false)
+        expect(Canvas::Cassandra::DatabaseBuilder).to receive(:configured?).with("auditors").once.and_return(false)
         expect(Canvas::EventStreamLogger).to receive(:error).never
         Auditors::Authentication.record(@pseudonym, 'login')
       end
@@ -230,6 +230,34 @@ describe Auditors::Authentication do
             to include(@event2)
         end
       end
+
+      context "different shard, db auditors" do
+        before do
+          allow(Auditors).to receive(:write_to_cassandra?).and_return(false)
+          allow(Auditors).to receive(:write_to_postgres?).and_return(true)
+          allow(Auditors).to receive(:read_from_cassandra?).and_return(false)
+          allow(Auditors).to receive(:read_from_postgres?).and_return(true)
+          @shard2.activate do
+            @account = account_model
+            user_with_pseudonym(account: @account, active_all: true)
+            @event1 = Auditors::Authentication.record(@pseudonym, 'login')
+          end
+          user_with_pseudonym(user: @user, active_all: true)
+          @event2 = Auditors::Authentication.record(@pseudonym, 'login')
+        end
+
+        it "should include events from the user's native shard" do
+          records = Auditors::Authentication.for_user(@user).paginate(:per_page => 2)
+          uuids = records.map(&:uuid)
+          expect(uuids).to include(@event1.id)
+        end
+
+        it "should include events from the other pseudonym's shard" do
+          records = Auditors::Authentication.for_user(@user).paginate(:per_page => 2)
+          uuids = records.map(&:uuid)
+          expect(uuids).to include(@event2.id)
+        end
+      end
     end
   end
 
@@ -251,6 +279,21 @@ describe Auditors::Authentication do
       expect(Auditors.write_to_postgres?).to eq(true)
       pg_record = Auditors::ActiveRecord::AuthenticationRecord.where(uuid: @event.id).first
       expect(pg_record.pseudonym_id).to eq(@pseudonym.id)
+    end
+  end
+
+  describe "with reading from postgres" do
+    before do
+      allow(Auditors).to receive(:config).and_return({'write_paths' => ['cassandra', 'active_record'], 'read_path' => 'active_record'})
+      @account = Account.default
+      user_with_pseudonym(active_all: true)
+      @event = Auditors::Authentication.record(@pseudonym, 'login')
+    end
+
+    it "can be read from postgres" do
+      expect(Auditors.read_from_postgres?).to eq(true)
+      pg_record = Auditors::ActiveRecord::AuthenticationRecord.where(uuid: @event.id).first
+      expect(Auditors::Authentication.for_pseudonym(@pseudonym).paginate(per_page: 1)).to include(pg_record)
     end
   end
 end

@@ -71,8 +71,8 @@ export function constructJSXImageElement(image, opts = {}) {
   let altText = title || display_name
   if (alt_text) {
     if (alt_text.decorativeSelected) {
-      altText = ''
-      otherAttributes['data-is-decorative'] = 'true'
+      altText = alt_text.altText || ' '
+      otherAttributes.role = 'presentation'
     } else {
       altText = alt_text.altText
     }
@@ -110,7 +110,7 @@ function constructJSXVideoEmbedding(video) {
     <iframe
       allow="fullscreen"
       allowFullScreen
-      data-media-id={`${video.media_id || video.id}`}
+      data-media-id={`${video.media_id || video.id || video.file_id}`}
       data-media-type="video"
       src={src}
       style={{
@@ -133,7 +133,7 @@ function constructJSXAudioEmbedding(audio) {
   const src = mediaIframeSrcFromFile(audio)
   return (
     <iframe
-      data-media-id={`${audio.media_id || audio.id}`}
+      data-media-id={`${audio.media_id || audio.id || audio.file_id}`}
       data-media-type="audio"
       src={src}
       style={{

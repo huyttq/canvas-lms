@@ -16,21 +16,52 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React from 'react'
-import {Heading} from '@instructure/ui-heading/lib/Heading'
+import React, {useState} from 'react'
+import {Tabs} from '@instructure/ui-tabs'
+import {Text} from '@instructure/ui-text'
+import {View} from '@instructure/ui-view'
+import AnnouncementFactory from './AnnouncementFactory'
+import I18n from 'i18n!past_global_announcements'
 
 const PastGlobalAnnouncements = () => {
+  const [selectedIndex, setSelectedIndex] = useState(0)
+  const activeAnnouncements = AnnouncementFactory(ENV.global_notifications.current, 'Current')
+  const pastAnnouncements = AnnouncementFactory(ENV.global_notifications.past, 'Past')
+
   return (
     <>
-      <Heading border="bottom" margin="medium">
-        Current
-      </Heading>
-      <div dangerouslySetInnerHTML={{__html: ENV.global_notifications.active}}/>
-
-      <Heading border="bottom" margin="medium">
-        Past
-      </Heading>
-      <div dangerouslySetInnerHTML={{__html: ENV.global_notifications.past}}/>
+      <Tabs
+        margin="0 auto"
+        padding="medium"
+        onRequestTabChange={(event, {index}) => {setSelectedIndex(index)}}
+      >
+        <Tabs.Panel
+          id="currentTab"
+          renderTitle={I18n.t('Current')}
+          isSelected={selectedIndex === 0}
+          data-testid="GlobalAnnouncementCurrentTab"
+        >
+          <View margin="0 0 small 0" display="block">
+            <Text size="medium" lineHeight="double">
+              {I18n.t('Active Announcements')}
+            </Text>
+          </View>
+          {activeAnnouncements}
+        </Tabs.Panel>
+        <Tabs.Panel
+          id="pastTab"
+          renderTitle={I18n.t('Recent')}
+          isSelected={selectedIndex === 1}
+          data-testid="GlobalAnnouncementPastTab"
+        >
+          <View margin="0 0 small 0" display="block">
+            <Text size="medium" lineHeight="double">
+              {I18n.t('Announcements from the past four months')}
+            </Text>
+          </View>
+          {pastAnnouncements}
+        </Tabs.Panel>
+      </Tabs>
     </>
   )
 }

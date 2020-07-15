@@ -20,6 +20,8 @@ require 'atom'
 
 class User < ActiveRecord::Base
   GRAVATAR_PATTERN = /^https?:\/\/[a-zA-Z0-9.-]+\.gravatar\.com\//
+  MAX_ROOT_ACCOUNT_ID_SYNC_ATTEMPTS = 5
+
   include TurnitinID
   include Pronouns
 
@@ -141,7 +143,7 @@ class User < ActiveRecord::Base
   has_many :assessment_question_bank_users
   has_many :assessment_question_banks, :through => :assessment_question_bank_users
   has_many :learning_outcome_results
-
+  has_many :trophies, inverse_of: :user, dependent: :destroy
   has_many :collaborators
   has_many :collaborations, -> { preload(:user, :collaborators) }, through: :collaborators
   has_many :assigned_submission_assessments, -> { preload(:user, submission: :assignment) }, class_name: 'AssessmentRequest', foreign_key: 'assessor_id'
@@ -431,6 +433,33 @@ class User < ActiveRecord::Base
     !!@skip_updating_account_associations
   end
 
+  def update_root_account_ids
+    # See User#associated_shards in MRA for an explanation of
+    # shard association levels
+    shards = associated_shards(:strong) + associated_shards(:weak)
+    refreshed_root_account_ids = Set.new
+
+    Shard.with_each_shard(shards) do
+      UserAccountAssociation.joins(:account).
+        where(user: self, accounts: { parent_account_id: nil }).
+        preload(:account).
+        find_each do |association|
+          refreshed_root_account_ids << association.global_account_id
+        end
+    end
+
+    self.update!(root_account_ids: refreshed_root_account_ids.to_a)
+  end
+
+  def update_root_account_ids_later
+    send_later_enqueue_args(
+      :update_root_account_ids,
+      {
+        max_attempts: MAX_ROOT_ACCOUNT_ID_SYNC_ATTEMPTS
+      }
+    )
+  end
+
   def update_account_associations_later
     self.send_later_if_production(:update_account_associations) unless self.class.skip_updating_account_associations?
   end
@@ -608,6 +637,11 @@ class User < ActiveRecord::Base
         current_associations[key] = [aa.id, aa.depth]
       end
 
+      account_id_to_root_account_id = Account.where(id: precalculated_associations&.keys).pluck(:id, :root_account_id).reduce({}) do |cache, fields|
+        cache[fields[0]] = fields[1] || fields[0]
+        cache
+      end
+
       users_or_user_ids.uniq.sort_by{|u| u.try(:id) || u}.each do |user_id|
         if user_id.is_a? User
           user = user_id
@@ -628,6 +662,7 @@ class User < ActiveRecord::Base
             aa = UserAccountAssociation.new
             aa.user_id = user_id
             aa.account_id = account_id
+            aa.root_account_id = account_id_to_root_account_id[account_id]
             aa.depth = depth
             aa.shard = Shard.shard_for(account_id)
             aa.shard.activate do
@@ -1039,6 +1074,7 @@ class User < ActiveRecord::Base
   def self.clone_communication_channel(cc, new_user, max_position)
     new_cc = cc.clone
     new_cc.shard = new_user.shard
+    new_cc.root_account_id = nil if cc.shard != new_cc.shard
     new_cc.position += max_position
     new_cc.user = new_user
     new_cc.save!
@@ -1263,20 +1299,6 @@ class User < ActiveRecord::Base
   def file_management_contexts
     contexts = [self] + self.courses + self.groups.active + self.all_courses
     contexts.uniq.select{|c| c.grants_right?(self, nil, :manage_files) }
-  end
-
-  def visible_inbox_types=(val)
-    types = (val || "").split(",")
-    write_attribute(:visible_inbox_types, types.map{|t| t.classify }.join(","))
-  end
-
-  def show_in_inbox?(type)
-    if self.respond_to?(:visible_inbox_types) && self.visible_inbox_types
-      types = self.visible_inbox_types.split(",")
-      types.include?(type)
-    else
-      true
-    end
   end
 
   def update_avatar_image(force_reload=false)
@@ -1968,22 +1990,24 @@ class User < ActiveRecord::Base
     end
   end
 
-  def submissions_for_context_codes(context_codes, start_at: nil, limit: 20)
-    return [] unless context_codes.present?
+  def submissions_for_course_ids(course_ids, start_at: nil, limit: 20)
+    return [] unless course_ids.present?
 
     shard.activate do
-      Rails.cache.fetch([self, 'submissions_for_context_codes', context_codes, start_at, limit].cache_key, expires_in: 15.minutes) do
+      ids_hash = Digest::MD5.hexdigest(course_ids.sort.join(","))
+      Rails.cache.fetch_with_batched_keys(['submissions_for_course_ids', ids_hash, start_at, limit].cache_key, expires_in: 1.day, batch_object: self, batched_keys: :submissions) do
         start_at ||= 4.weeks.ago
 
         Shackles.activate(:slave) do
           submissions = []
           submissions += self.submissions.posted.where("GREATEST(submissions.submitted_at, submissions.created_at) > ?", start_at).
-            for_context_codes(context_codes).eager_load(:assignment).
+            where(:course_id => course_ids).eager_load(:assignment).
             where("submissions.score IS NOT NULL AND assignments.workflow_state=?", 'published').
             order('submissions.created_at DESC').
             limit(limit).to_a
 
-          submissions += Submission.active.posted.where(user_id: self).for_context_codes(context_codes).
+          submissions += Submission.active.posted.where(user_id: self).
+            where(:course_id => course_ids).
             joins(:assignment).
             where(assignments: {workflow_state: 'published'}).
             where('last_comment_at > ?', start_at).
@@ -2002,16 +2026,16 @@ class User < ActiveRecord::Base
 
   # This is only feedback for student contexts (unless specific contexts are passed in)
   def recent_feedback(
-    context_codes: nil,
+    course_ids: nil,
     contexts: nil,
-    **opts # forwarded to submissions_for_context_codes
+    **opts # forwarded to submissions_for_course_ids
   )
-    context_codes ||= if contexts
-        setup_context_lookups(contexts)
+    course_ids ||= if contexts
+        contexts.select{|c| c.is_a?(Course)}.map(&:id)
       else
-        self.participating_student_course_ids.map { |id| "course_#{id}" }
+        self.participating_student_course_ids
       end
-    submissions_for_context_codes(context_codes, **opts)
+    submissions_for_course_ids(course_ids, **opts)
   end
 
   def visible_stream_item_instances(opts={})
@@ -2447,8 +2471,8 @@ class User < ActiveRecord::Base
     messageable_user_calculator.messageable_users_in_context(asset_string)
   end
 
-  def count_messageable_users_in_context(asset_string)
-    messageable_user_calculator.count_messageable_users_in_context(asset_string)
+  def count_messageable_users_in_context(asset_string, options={})
+    messageable_user_calculator.count_messageable_users_in_context(asset_string, options)
   end
 
   def messageable_users_in_course(course_or_id)

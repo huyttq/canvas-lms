@@ -74,6 +74,16 @@ module DataFixup::Auditors::Migrate
           rec_ids = records.map(&:id)
           ids.each{|id| expect(rec_ids).to include(id['id'])}
         end
+
+        it "aborts cleanly if all records already inserted" do
+          date = Time.zone.today
+          expect(::Auditors::ActiveRecord::AuthenticationRecord.count).to eq(0)
+          worker = AuthenticationWorker.new(account.id, date)
+          worker.perform_migration
+          expect(::Auditors::ActiveRecord::AuthenticationRecord.count).to eq(20)
+          expect { worker.perform_migration }.to_not raise_error
+          expect(::Auditors::ActiveRecord::AuthenticationRecord.count).to eq(20)
+        end
       end
 
       it "recovers if user has been hard deleted" do
@@ -114,6 +124,50 @@ module DataFixup::Auditors::Migrate
       ])
       expect(filtered.size).to eq(1)
       expect(filtered[0]['submission_id']).to eq(submission.id)
+    end
+
+    it "handles missing users" do
+      submission = submission_model
+      other_submission = submission_model
+      user = user_model
+      expect(submission.id).to_not be_nil
+      expect(user.id).to_not be_nil
+      worker = GradeChangeWorker.new(account.id, Time.now.utc)
+      filtered = worker.filter_dead_foreign_keys([
+        {'student_id' => nil, 'grader_id' => nil, 'submission_id' => other_submission.id},
+        {'student_id' => nil, 'grader_id' => nil, 'submission_id' => submission.id},
+      ])
+      expect(filtered.size).to eq(2)
+      expect(filtered[0]['submission_id']).to eq(other_submission.id)
+      expect(filtered[1]['submission_id']).to eq(submission.id)
+    end
+
+    it "handles missing users in course records" do
+      course = course_model
+      user = user_model
+      expect(course.id).to_not be_nil
+      expect(user.id).to_not be_nil
+      worker = CourseWorker.new(account.id, Time.now.utc)
+      filtered = worker.filter_dead_foreign_keys([
+        {'course_id' => course.id, 'user_id' => user.id},
+        {'course_id' => course.id, 'user_id' => nil},
+      ])
+      expect(filtered.size).to eq(1)
+      expect(filtered[0]['user_id']).to eq(user.id)
+    end
+
+    it "handles missing courses in course records" do
+      course = course_model
+      user = user_model
+      expect(course.id).to_not be_nil
+      expect(user.id).to_not be_nil
+      worker = CourseWorker.new(account.id, Time.now.utc)
+      filtered = worker.filter_dead_foreign_keys([
+        {'course_id' => course.id, 'user_id' => user.id},
+        {'course_id' => -2, 'user_id' => user.id},
+      ])
+      expect(filtered.size).to eq(1)
+      expect(filtered[0]['course_id']).to eq(course.id)
     end
 
     it "writes course data to postgres that's in cassandra" do
@@ -410,7 +464,7 @@ module DataFixup::Auditors::Migrate
         expect(p1_count[0]["count"]).to eq(0)
         expect(p2_count[0]["count"]).to eq(0)
         expect(p3_count[0]["count"]).to eq(0)
-        worker.bulk_insert_auditor_recs(Auditors::ActiveRecord::AuthenticationRecord, events)
+        Auditors::ActiveRecord::AuthenticationRecord.bulk_insert(events)
         p1_count = User.connection.execute("SELECT count(*) from #{p1_name}")
         p2_count = User.connection.execute("SELECT count(*) from #{p2_name}")
         p3_count = User.connection.execute("SELECT count(*) from #{p3_name}")
@@ -419,7 +473,7 @@ module DataFixup::Auditors::Migrate
         expect(p3_count[0]["count"]).to eq(0)
       end
 
-      it "can migrate partitions" do
+      it "does not need to migrate partitions" do
         events = [
           {
             "account_id"=>@pseudonym.account_id,
@@ -443,13 +497,6 @@ module DataFixup::Auditors::Migrate
         p1_name = Auditors::ActiveRecord::AuthenticationRecord.quoted_table_name.gsub(/"$/, "_2020_5\"")
         p2_name = Auditors::ActiveRecord::AuthenticationRecord.quoted_table_name.gsub(/"$/, "_2020_4\"")
         p3_name = ::Auditors::ActiveRecord::AuthenticationRecord.quoted_table_name
-        p1_count = User.connection.execute("SELECT count(*) from #{p1_name}")
-        p2_count = User.connection.execute("SELECT count(*) from #{p2_name}")
-        p3_count = User.connection.execute("SELECT count(*) from ONLY #{p3_name}")
-        expect(p1_count[0]["count"]).to eq(0)
-        expect(p2_count[0]["count"]).to eq(0)
-        expect(p3_count[0]["count"]).to eq(2)
-        ::DataFixup::Auditors::MigrateAuthToPartitions.run
         p1_count = User.connection.execute("SELECT count(*) from #{p1_name}")
         p2_count = User.connection.execute("SELECT count(*) from #{p2_name}")
         p3_count = User.connection.execute("SELECT count(*) from ONLY #{p3_name}")

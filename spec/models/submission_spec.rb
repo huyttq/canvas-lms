@@ -5313,9 +5313,9 @@ describe Submission do
       student.submissions.destroy_all
 
       create_sql = "INSERT INTO #{Submission.quoted_table_name}
-                     (assignment_id, user_id, workflow_state, created_at, updated_at, context_code, course_id)
+                     (assignment_id, user_id, workflow_state, created_at, updated_at, course_id)
                      values
-                     (#{@assignment.id}, #{student.id}, 'unsubmitted', now(), now(), '#{@assignment.context_code}', #{@assignment.context_id})"
+                     (#{@assignment.id}, #{student.id}, 'unsubmitted', now(), now(), #{@assignment.context_id})"
 
       sub = Submission.find(Submission.connection.create(create_sql))
       expect(sub.submission_history).to eq([sub])
@@ -6965,6 +6965,18 @@ describe Submission do
       @shard1.activate do
         expect(@assignment.submissions.postable.to_sql).to_not include(@shard1.name)
       end
+    end
+  end
+
+  describe "root account ID" do
+    let_once(:root_account) { Account.create! }
+    let_once(:subaccount) { Account.create!(root_account: root_account) }
+    let_once(:course) { Course.create!(account: subaccount) }
+    let_once(:student) { course.enroll_student(User.create!, workflow_state: "active").user }
+
+    it "is set to the root account ID of the owning course" do
+      assignment = course.assignments.create!
+      expect(assignment.submission_for_student(student).root_account_id).to eq root_account.id
     end
   end
 end

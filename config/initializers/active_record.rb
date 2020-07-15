@@ -426,7 +426,9 @@ class ActiveRecord::Base
         @collkey ||= {}
         @collkey[Shard.current.database_server.id] = connection.extension_installed?(:pg_collkey)
       end
-      if (schema = @collkey[Shard.current.database_server.id])
+      if (collation = Canvas::ICU.choose_pg12_collation(connection.icu_collations) && false)
+        "(#{col} COLLATE #{collation})"
+      elsif (schema = @collkey[Shard.current.database_server.id])
         # The collation level of 3 is the default, but is explicitly specified here and means that
         # case, accents and base characters are all taken into account when creating a collation key
         # for a string - more at https://pgxn.org/dist/pg_collkey/0.5.1/
@@ -688,8 +690,19 @@ class ActiveRecord::Base
       end
     end
 
-    transaction do
-      connection.bulk_insert(table_name, records)
+    if self.respond_to?(:attrs_in_partition_groups)
+      # this model is partitioned, we need to send a separate
+      # insert statement for each partition represented
+      # in the input records
+      self.attrs_in_partition_groups(records) do |partition_name, partition_records|
+        transaction do
+          connection.bulk_insert(partition_name, partition_records)
+        end
+      end
+    else
+      transaction do
+        connection.bulk_insert(table_name, records)
+      end
     end
   end
 
@@ -711,6 +724,8 @@ module UsefulFindInBatches
     # see the contents of our current transaction)
     if connection.open_transactions == 0 && !start && eager_load_values.empty? && !ActiveRecord::Base.in_migration && !strategy || strategy == :copy
       self.activate { |r| r.find_in_batches_with_copy(**kwargs, &block) }
+    elsif strategy == :pluck_ids
+      self.activate { |r| r.find_in_batches_with_pluck_ids(**kwargs, &block) }
     elsif should_use_cursor? && !start && eager_load_values.empty? && !strategy || strategy == :cursor
       self.activate { |r| r.find_in_batches_with_cursor(**kwargs, &block) }
     elsif find_in_batches_needs_temp_table? && !strategy || strategy == :temp_table
@@ -866,6 +881,25 @@ ActiveRecord::Relation.class_eval do
         pool.send(:adopt_connection, conn)
         pool.checkin(conn)
       end
+    end
+  end
+
+  # in some cases we're doing a lot of work inside
+  # the yielded block, and holding open a transaction
+  # or even a connection while we do all that work can
+  # be a problem for the database, especially if a lot
+  # of these are happening at once.  This strategy
+  # makes one query to hold onto all the IDs needed for the
+  # iteration (make sure they'll fit in memory, or you could be sad)
+  # and yields the objects in batches in the same order as the scope specified
+  # so the DB connection can be fully recycled during each block.
+  def find_in_batches_with_pluck_ids(options = {})
+    batch_size = options[:batch_size] || 1000
+    all_object_ids = pluck(:id)
+    current_order_values = order_values
+    all_object_ids.in_groups_of(batch_size) do |id_batch|
+      object_batch = klass.unscoped.where(id: id_batch).order(current_order_values)
+      yield object_batch
     end
   end
 
@@ -1400,30 +1434,6 @@ ActiveRecord::Migrator.migrations_paths.concat Dir[Rails.root.join('gems', 'plug
 ActiveRecord::Tasks::DatabaseTasks.migrations_paths = ActiveRecord::Migrator.migrations_paths
 
 ActiveRecord::ConnectionAdapters::SchemaStatements.class_eval do
-  # in anticipation of having to re-run migrations due to integrity violations or
-  # killing stuff that is holding locks too long
-  def add_foreign_key_if_not_exists(from_table, to_table, options = {})
-    options[:column] ||= "#{to_table.to_s.singularize}_id"
-    column = options[:column]
-    case self.adapter_name
-    when 'PostgreSQL'
-      foreign_key_name = foreign_key_name(from_table, options)
-      schema = @config[:use_qualified_names] ? quote(shard.name) : 'current_schema()'
-      value = select_value("SELECT convalidated FROM pg_constraint INNER JOIN pg_namespace ON pg_namespace.oid=connamespace WHERE conname='#{foreign_key_name}' AND nspname=#{schema}")
-      if value == 'f'
-        execute("ALTER TABLE #{quote_table_name(from_table)} DROP CONSTRAINT #{quote_table_name(foreign_key_name)}")
-      elsif value
-        return
-      end
-
-      add_foreign_key(from_table, to_table, options)
-    else
-      foreign_key_name = foreign_key_name(from_table, column, options)
-      return if foreign_keys(from_table).find { |k| k.options[:name] == foreign_key_name }
-      add_foreign_key(from_table, to_table, options)
-    end
-  end
-
   def find_foreign_key(from_table, to_table, column: nil)
     column ||= "#{to_table.to_s.singularize}_id"
     foreign_keys(from_table).find do |key|
@@ -1448,9 +1458,44 @@ ActiveRecord::ConnectionAdapters::SchemaStatements.class_eval do
     end
   end
 
-  def remove_foreign_key_if_exists(table, options = {})
-    return unless foreign_key_exists?(table, options)
-    remove_foreign_key(table, options)
+  def foreign_key_for(from_table, options_or_to_table = {})
+    return unless supports_foreign_keys?
+    fks = foreign_keys(from_table).select { |fk| fk.defined_for? options_or_to_table }
+    # prefer a FK on a column named after the table
+    unless options_or_to_table.is_a?(Hash)
+      column = foreign_key_column_for(options_or_to_table) if options_or_to_table
+      return fks.find { |fk| fk.column == column} || fks.first
+    end
+    fks.first
+  end
+
+  def remove_foreign_key(from_table, *args)
+    return unless supports_foreign_keys?
+
+    raise ArgumentError if args.length > 2
+
+    # support remove_foreign_key :table, :table, if_exists: stuff
+    # OR
+    # remove_foreign_key :table, column: :stuff
+    # OR
+    # remove_foreign_key :table, column: :stuff, if_exists: stuff
+    options = args.last
+    options = {} unless options.is_a?(Hash)
+    options_or_to_table = args.first || {}
+
+    # have to account for if options is a hash, if_exists will just get wrapped up
+    # in it
+    if options.delete(:if_exists)
+      fk_name_to_delete = foreign_key_for(from_table, options_or_to_table)&.name
+      return if fk_name_to_delete.nil?
+    else
+      fk_name_to_delete = foreign_key_for!(from_table, options_or_to_table).name
+    end
+
+    at = create_alter_table from_table
+    at.drop_foreign_key fk_name_to_delete
+
+    execute schema_creation.accept(at)
   end
 end
 

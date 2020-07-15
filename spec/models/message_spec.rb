@@ -66,7 +66,7 @@ describe Message do
     it "should have a sane body" do
       @au = AccountUser.create(:account => account_model)
       msg = generate_message(:account_user_notification, :email, @au)
-      expect(msg.html_body.scan(/<html>/).length).to eq 1
+      expect(msg.html_body.scan(/<html dir="ltr" lang="en">/).length).to eq 1
       expect(msg.html_body.index('<!DOCTYPE')).to eq 0
     end
 
@@ -360,11 +360,11 @@ describe Message do
 
       context 'with the deprecate_sms feature enabled' do
         before :each do
-          @user.account.enable_feature!(:deprecate_sms)
+         Account.site_admin.enable_feature!(:deprecate_sms)
         end
 
         after :each do
-          @user.account.disable_feature!(:deprecate_sms)
+          Account.site_admin.disable_feature!(:deprecate_sms)
         end
 
         it "allows whitelisted notification types" do

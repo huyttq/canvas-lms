@@ -15,6 +15,15 @@
 # You should have received a copy of the GNU Affero General Public License along
 # with this program. If not, see <http://www.gnu.org/licenses/>.
 
+Canvas::Plugin.register('apple', nil,
+                        name: 'Sign in with Apple',
+                        description: -> { t :description, 'Sign in With Apple'},
+                        website: 'https://developer.apple.com',
+                        author: 'Instructure',
+                        author_website: 'https://www.instructure.com',
+                        version: '1.0.0',
+                        settings_partial: 'plugins/apple_settings'
+)
 Canvas::Plugin.register('clever', nil,
   name: 'Clever',
   description: -> { t :description, 'Clever Login' },
@@ -407,6 +416,7 @@ Canvas::Plugin.register('inst_fs', nil, {
   :version => '0.0.1',
   :settings => {
     :migration_rate => 0,
+    :service_worker => false,
   },
   :settings_partial => 'plugins/inst_fs_settings',
   :validator => 'InstFsValidator'
