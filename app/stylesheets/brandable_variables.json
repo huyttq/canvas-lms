@@ -37,7 +37,7 @@
   {
     "variable_name": "ic-brand-global-nav-bgd",
     "type": "color",
-    "default": "#394B58"
+    "default": "#9c7ec1"
   },
   {
     "variable_name": "ic-brand-global-nav-ic-icon-svg-fill",
@@ -77,19 +77,19 @@
   {
     "variable_name": "ic-brand-global-nav-logo-bgd",
     "type": "color",
-    "default": "#394B58"
+    "default": "#9c7ec1"
   },
   {
     "variable_name": "ic-brand-header-image",
     "type": "image",
     "accept": "image/png,image/gif,image/jpeg,image/svg+xml,image/svg",
-    "default": "/images/canvas_logomark_only@2x.png"
+    "default": "/images/ahea-logo.png"
   },
   {
     "variable_name": "ic-brand-mobile-global-nav-logo",
     "type": "image",
     "accept": "image/png,image/gif,image/jpeg,image/svg+xml,image/svg",
-    "default": "/images/mobile-global-nav-logo.svg"
+    "default": "/images/ahea-logo.png"
   }
 ]},
 {
@@ -112,7 +112,7 @@
     "variable_name": "ic-brand-apple-touch-icon",
     "type": "image",
     "accept": "image/png",
-    "default": "/images/apple-touch-icon.png"
+    "default": "/images/ahea-logo.png"
   },{
     "variable_name": "ic-brand-msapplication-tile-color",
     "type": "color",
@@ -139,7 +139,7 @@
   "variables": [{
     "variable_name": "ic-brand-Login-body-bgd-color",
     "type": "color",
-    "default": "#394B58"
+    "default": "#9c7ec1"
   },
   {
     "variable_name": "ic-brand-Login-body-bgd-image",
@@ -156,7 +156,7 @@
     "variable_name": "ic-brand-Login-logo",
     "type": "image",
     "accept": "image/png,image/gif,image/jpeg, image/svg+xml,image/svg",
-    "default": "/images/login/canvas-logo.svg"
+    "default": "/images/ahea-logo.png"
   },
   {
     "variable_name": "ic-brand-Login-Content-bgd-color",
