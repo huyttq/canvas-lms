@@ -1,1 +1,51 @@
 .DS_Store
+
+.bundle/
+.byebug_history
+.env
+/.yardoc/
+/.ruby-version
+/coverage/
+/coverage-js/
+/db/*.sqlite*
+/db/*sql
+docker-compose.override.yml
+/exports/
+Gemfile.lock
+Gemfile.lock.next
+/log/
+mkmf.log
+/node_modules
+npm-debug.log
+/tmp/
+/vendor/bundle
+yarn-error.log
+
+# canvas-gems
+/gems/*/coverage
+/gems/*/tmp
+/gems/*/node_modules
+
+# user docker compose overrides
+docker-compose.local.*
+
+# sub-packages
+/packages/*/node_modules
+/packages/*/es
+/packages/*/lib
+/packages/*/coverage/
+/packages/canvas-planner/.babel-cache
+
+# generated scope names
+/lib/api_scope_mapper.rb
+
+# generated scopes markdown
+/doc/api/api_token_scopes.md
+
+# js coverage stuff
+.nyc_output
+coverage-jest
+coverage-karma
+
+# generated graphql schema
+schema.graphql
