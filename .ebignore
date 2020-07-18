@@ -15,7 +15,7 @@ Gemfile.lock
 Gemfile.lock.next
 /log/
 mkmf.log
-/node_modules
+/node_modules/
 npm-debug.log
 /tmp/
 /vendor/bundle
@@ -49,3 +49,8 @@ coverage-karma
 
 # generated graphql schema
 schema.graphql
+
+/.git/
+/spec/
+/jest/
+/frontend_build/
