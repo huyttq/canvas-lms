@@ -54,3 +54,4 @@ schema.graphql
 /spec/
 /jest/
 /frontend_build/
+/public/dist/webpack-dev/
