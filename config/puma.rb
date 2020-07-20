@@ -23,9 +23,9 @@
 # and maximum; this matches the default thread size of Active Record.
 #
 
-rails_env = ENV.fetch("RAILS_ENV") { "development" }
+# rails_env = ENV.fetch("RAILS_ENV") { "development" }
 # Specifies the `environment` that Puma will run in.
-environment rails_env
+# environment rails_env
 
 # max_threads_count = ENV.fetch("RAILS_MAX_THREADS") { 5 }
 # min_threads_count = ENV.fetch("RAILS_MIN_THREADS") { max_threads_count }
@@ -35,7 +35,7 @@ threads 0, 4
 #
 # port        ENV.fetch("PORT") { 3000 }
 # Specifies the `pidfile` that Puma will use.
-pidfile ENV.fetch("PIDFILE") { "tmp/pids/server.pid" }
+# pidfile ENV.fetch("PIDFILE") { "tmp/pids/server.pid" }
 
 # Specifies the number of `workers` to boot in clustered mode.
 # Workers are forked web server processes. If using threads and workers together
@@ -43,7 +43,7 @@ pidfile ENV.fetch("PIDFILE") { "tmp/pids/server.pid" }
 # Workers do not work on JRuby or Windows (both of which do not support
 # processes).
 #
-workers ENV.fetch("WEB_CONCURRENCY") { 0 }
+# workers ENV.fetch("WEB_CONCURRENCY") { 0 }
 
 # Use the `preload_app!` method when specifying a `workers` number.
 # This directive tells Puma to first boot the application and load code
@@ -53,11 +53,11 @@ workers ENV.fetch("WEB_CONCURRENCY") { 0 }
 #preload_app!
 
 # Allow puma to be restarted by `rails restart` command.
-plugin :tmp_restart
+# plugin :tmp_restart
 
-if rails_env = 'production'
-  bind "unix:///var/run/puma/my_app.sock"
+# if rails_env = 'production'
+#   bind "unix:///var/run/puma/my_app.sock"
 
-  # Log puma output to files
-  stdout_redirect 'log/puma.stdout.log', 'log/puma.stderr.log', true
-end
+#   # Log puma output to files
+#   stdout_redirect 'log/puma.stdout.log', 'log/puma.stderr.log', true
+# end
