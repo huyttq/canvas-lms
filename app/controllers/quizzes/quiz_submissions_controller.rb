@@ -25,6 +25,8 @@ class Quizzes::QuizSubmissionsController < ApplicationController
   before_action :require_context
   before_action :require_quiz, :only => [ :index, :create, :extensions, :show, :update, :log ]
   before_action :require_quiz_submission, :only => [ :show, :log ]
+  # site-wide ip whitelisting
+  before_action :check_whitelist_ips, :only => :create
   batch_jobs_in_actions :only => [:update, :create], :batch => { :priority => Delayed::LOW_PRIORITY }
 
   def index
