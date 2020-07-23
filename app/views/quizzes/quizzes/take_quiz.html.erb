@@ -120,14 +120,16 @@
     </div>
   </div>
 
-  <div class=form-actions>
+  <div>
     <p>
-      By clicking '<%= t('buttons.submit_quiz', "Submit Quiz") %>' button, I declare that:<br />
-      <ul style="list-style-type: decimal">
-        <li>This assignment is my own work. I make this statement in full knowledge of and understanding that, should it be found to be false, I will be deemed Not Competent.</li>
-        <li>I have attended and understood the Pre Assessment Briefing as conducted by my trainer.</li>
-      </ul>
-    </p>
+      By clicking '<%= t('buttons.submit_quiz', "Submit Quiz") %>' button, I declare that:
+    </p> 
+    <ul style="list-style-type: decimal">
+      <li>This assignment is my own work. I make this statement in full knowledge of and understanding that, should it be found to be false, I will be deemed Not Competent.</li>
+      <li>I have attended and understood the Pre Assessment Briefing as conducted by my trainer.</li>
+    </ul>
+  </div>
+  <div class=form-actions>
     <span id="last_saved_indicator"><%= t("not_saved", "Not saved") %></span>
     <button type="submit" class="btn submit_button quiz_submit btn-secondary" id="submit_quiz_button" data-action="<%= @quiz_presenter.submit_form_action(session, @current_user) %>">
       <%= t('buttons.submit_quiz', "Submit Quiz") %>
