@@ -54,13 +54,13 @@ en-AU:
       previous: k
       show_assign: f
   AssignmentListItemView: 
-    complete: Complete
+    complete: Satisfactory
     grade_gpa_scale_screenreader: "Grade: %{grade}"
     grade_letter_grade_screenreader: "Grade: %{grade}"
     grade_pass_fail_screenreader: "Grade: %{grade}"
     grade_percent: "%{grade}%"
     grade_percent_screenreader: "Grade: %{grade}%"
-    incomplete: Incomplete
+    incomplete: Unsatisfactory
   CollectionView: 
     no_items: "No items."
   CreateAssignmentView: 
@@ -3096,7 +3096,7 @@ en-AU:
       submit_assignment: "Submit Assignment"
     cannot_delete_group: "You must have at least one Assignment Group"
     cant_unpublish_when_students_submit: "Can't unpublish if there are student submissions"
-    complete: Complete
+    complete: Satisfactory
     confirm: 
       delete_assignment: "Are you sure you want to delete this assignment?"
       delete_group: "Are you sure you want to delete this group?"
@@ -3274,7 +3274,7 @@ en-AU:
         group_weight: Weight
         total: Total
     higher_than_max: "You cannot use a number greater than the number of assignments"
-    incomplete: Incomplete
+    incomplete: Unsatisfactory
     index_view: 
       add_assignment: Assignment
       add_group: Group
@@ -5997,7 +5997,7 @@ en-AU:
         add_item: "Add Content"
       images: 
         alt: 
-          incomplete: incomplete
+          incomplete: unsatisfactory
         title: 
           complete: "Unit Completed"
           incomplete: "Unit Incomplete"
