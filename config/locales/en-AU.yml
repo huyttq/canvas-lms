@@ -14232,14 +14232,14 @@ en-AU:
         body: "Canvas Alert - Enrolled: course as %{role_type}"
     enrollment_registration: 
       email: 
-        body_designer: "You've been invited to participate in a class at %{website}.  The class is called %{course}, and you've been invited to participate as a designer."
-        body_observer: "You've been invited to participate in a class at %{website}.  The class is called %{course}, and you've been invited to participate as a observer."
-        body_student: "You've been invited to participate in a class at %{website}.  The class is called %{course}, and you've been invited to participate as a student."
-        body_ta: "You've been invited to participate in a class at %{website}.  The class is called %{course}, and you've been invited to participate as a TA."
-        body_teacher: "You've been invited to participate in a class at %{website}.  The class is called %{course}, and you've been invited to participate as a teacher."
+        body_designer: "You've been invited to participate in a class at AHEA.  The class is called %{course}, and you've been invited to participate as a designer."
+        body_observer: "You've been invited to participate in a class at AHEA.  The class is called %{course}, and you've been invited to participate as a observer."
+        body_student: "You've been invited to participate in a class at AHEA.  The class is called %{course}, and you've been invited to participate as a student."
+        body_ta: "You've been invited to participate in a class at AHEA.  The class is called %{course}, and you've been invited to participate as a TA."
+        body_teacher: "You've been invited to participate in a class at AHEA.  The class is called %{course}, and you've been invited to participate as a teacher."
         details: "You'll need to register with Canvas before you can participate in the class.  To get started, visit the course page here:"
         html: 
-          body: "You've been invited to participate in a class at %{website}. The class is called %{course}. Course role: %{role_type}"
+          body: "You've been invited to participate in a class at AHEA. The class is called %{course}. Course role: %{role_type}"
           body_designer: "The class is called %{course}, and you've been invited to participate as a designer."
           body_observer: "The class is called %{course}, and you've been invited to participate as an observer."
           body_student: "The class is called %{course}, and you've been invited to participate as a student."
@@ -14250,7 +14250,7 @@ en-AU:
           link: "Click here to view the course page."
           name: Name
           none: none
-          participate_in_class: "You've been invited to participate in a class at %{website}"
+          participate_in_class: "You've been invited to participate in a class at AHEA"
           subject: "Course Invitation"
           username: Username
         labels: 
@@ -14272,11 +14272,11 @@ en-AU:
           username: Username
         none: none
       summary: 
-        body_designer: "You've been invited to participate in a class at %{website}.  The class is called %{course}, and you've been invited to participate as a designer."
-        body_observer: "You've been invited to participate in a class at %{website}.  The class is called %{course}, and you've been invited to participate as a observer."
-        body_student: "You've been invited to participate in a class at %{website}.  The class is called %{course}, and you've been invited to participate as a student."
-        body_ta: "You've been invited to participate in a class at %{website}.  The class is called %{course}, and you've been invited to participate as a TA."
-        body_teacher: "You've been invited to participate in a class at %{website}.  The class is called %{course}, and you've been invited to participate as a teacher."
+        body_designer: "You've been invited to participate in a class at AHEA.  The class is called %{course}, and you've been invited to participate as a designer."
+        body_observer: "You've been invited to participate in a class at AHEA.  The class is called %{course}, and you've been invited to participate as a observer."
+        body_student: "You've been invited to participate in a class at AHEA.  The class is called %{course}, and you've been invited to participate as a student."
+        body_ta: "You've been invited to participate in a class at AHEA.  The class is called %{course}, and you've been invited to participate as a TA."
+        body_teacher: "You've been invited to participate in a class at AHEA.  The class is called %{course}, and you've been invited to participate as a teacher."
         subject: "Course Invitation"
       twitter: 
         body: "Canvas Alert - Invited: course as %{enrollment_type}"
@@ -25091,7 +25091,7 @@ en-AU:
   you_ve_been_given_an_account_role_for_the_account__18e0ef38: "You've been given an account role for the %{account} account at %{website}. Role type: %{role_type}."
   you_ve_been_invited_to_course_90764f1: "You've been invited to %{course}."
   you_ve_been_invited_to_course_course_role_role_typ_b8ab8f22: "You've been invited to %{course}. Course role: %{role_type}"
-  you_ve_been_invited_to_participate_in_a_class_at_w_b87cd481: "You've been invited to participate in a class at %{website}.  The class is called %{course}. Course role: %{role_type}"
+  you_ve_been_invited_to_participate_in_a_class_at_w_b87cd481: "You've been invited to participate in a class at AHEA.  The class is called %{course}. Course role: %{role_type}"
   you_ve_been_invited_to_participate_in_the_course_c_a8d1f6a8: "You've been invited to participate in the course, %{course}. Course role: %{role_type}"
   you_ve_been_invited_to_peer_review_reviewee_82580fb: "You've been invited to peer review %{reviewee}."
   you_ve_been_invited_to_peer_review_reviewee_follow_2e71fce2: "You've been invited to peer review %{reviewee}. Follow this link to review them: %{link}."
