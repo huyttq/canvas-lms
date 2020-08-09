@@ -2799,12 +2799,12 @@ class ApplicationController < ActionController::Base
   helper_method :show_student_view_button?
   
   def is_ip_whitelisted?
-    return true if ::Rails.env.dev? || ::Rails.env.test?
+    return true if ::Rails.env.development? || ::Rails.env.test?
     Canvas::Security.whitelist_ips.include? request.remote_ip
   end
 
   def check_whitelist_ips
-    return if ::Rails.env.dev? || ::Rails.env.test?
+    return if ::Rails.env.development? || ::Rails.env.test?
 
     msg = "You need to be in our office in order to submit"
     unless is_ip_whitelisted?
