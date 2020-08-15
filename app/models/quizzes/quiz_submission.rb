@@ -151,6 +151,21 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
     raise "Cannot view temporary data for completed quiz" unless !self.completed?
     raise "Cannot view temporary data for completed quiz" if graded?
     res = (self.submission_data || {}).with_indifferent_access
+    
+    unless self.submitted_attempts.last.nil?
+      last_submission = self.submitted_attempts.last.submission_data
+      correct_answers = last_submission.select { |d| 
+                            d["points"] > 0 # ASSUMPTION : 1.0 point = correct answer
+                          }
+                          .map { |r|
+                            t = {}
+                            t['question_' + r["question_id"].to_s] = r["text"]
+                            t                            
+                          }
+      correct_answers_hash = correct_answers.reduce Hash.new, :merge
+      res = correct_answers_hash.merge res
+    end 
+    
     res
   end
 
