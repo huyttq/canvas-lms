@@ -900,7 +900,10 @@ $(function() {
     $('.question_holder textarea.question_input').each(function() {
       $(this).attr('id', 'question_input_' + quizSubmission.contentBoxCounter++)
       const isReadonly = $(this).is('[readonly]')
-      RichContentEditor.loadNewEditor($(this), {manageParent: true, tinyOptions: { readonly: isReadonly } })
+      RichContentEditor.loadNewEditor($(this), {
+        manageParent: true,
+        tinyOptions: {readonly: isReadonly}
+      })
     })
   }, 2000)
 
