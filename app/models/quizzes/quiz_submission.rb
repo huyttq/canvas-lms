@@ -154,16 +154,18 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
     
     unless self.submitted_attempts.last.nil?
       last_submission = self.submitted_attempts.last.submission_data
-      correct_answers = last_submission.select { |d| 
-                            d["points"] > 0 # ASSUMPTION : 1.0 point = correct answer
-                          }
-                          .map { |r|
-                            t = {}
-                            t['question_' + r["question_id"].to_s] = r["text"]
-                            t                            
-                          }
-      correct_answers_hash = correct_answers.reduce Hash.new, :merge
-      res = correct_answers_hash.merge res
+      last_submission.each { |sd|
+        qid = 'question_' + sd["question_id"].to_s
+
+        isCorrect = sd["points"] > 0
+        if (isCorrect)
+          res[qid] = sd["text"]
+          res[qid + '_locked'] = "true"
+        else
+          # marked all unsatisfactory/unanswered questions
+          res[qid + '_marked'] = "true" 
+        end                      
+      }
     end 
     
     res
