@@ -899,7 +899,8 @@ $(function() {
   setTimeout(function() {
     $('.question_holder textarea.question_input').each(function() {
       $(this).attr('id', 'question_input_' + quizSubmission.contentBoxCounter++)
-      RichContentEditor.loadNewEditor($(this), {manageParent: true})
+      const isReadonly = $(this).is('[readonly]')
+      RichContentEditor.loadNewEditor($(this), {manageParent: true, tinyOptions: { readonly: isReadonly } })
     })
   }, 2000)
 
