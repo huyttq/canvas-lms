@@ -50,7 +50,7 @@
   <% end %>
   <textarea name="question_<%= hash_get(question, :id) %>" class="question_input" autocomplete='off' <%= 'readonly="readonly"' unless editable %>><%= value %></textarea>
 <% elsif question_type.entry_type == "file" %>
-  <% if !editable%>
+  <% if !editable && user_answer && @attachments %>
     <% attachment = @attachments[user_answer[:attachment_ids].try(:first).to_i] %>
       <% if attachment %>
         <a class="icon-download" href="<%= file_download_url(attachment) %>">
