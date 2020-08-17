@@ -67,7 +67,7 @@
   <a name="question_<%= hash_get(question, :id, "blank") %>"></a>
   <% 
     marked = assessing && @stored_params && @stored_params["question_#{hash_get(question, :id)}_marked"].present? 
-    question_locked = @stored_params["question_#{hash_get(question, :id)}_locked"].present?
+    question_locked = @stored_params && @stored_params["question_#{hash_get(question, :id)}_locked"].present?
   %>
   
   <div class="display_question question <%= question_type.question_type %> <%= "marked" if marked %> <%= "correct" if correct && display_correct_answers %> <%= "incorrect" if incorrect %> <%= "unanswered" if unanswered %> <%= "partial_credit" if partial_credit %>" id="question_<%= hash_get(question, :id, "new") %>">
