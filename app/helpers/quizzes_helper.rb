@@ -442,6 +442,8 @@ module QuizzesHelper
         match = match.sub(/\{\{question_.*?\}\}/, answer.to_s).
           # Match on "/>" but only when at the end of the string and insert "readonly" if set to be readonly
           sub(/\/*>\Z/, readonly_markup)
+      else
+        match = match.sub(/\/*>\Z/, readonly_markup)
       end
       # add labelling to input element regardless
       match.sub(/\/*>\Z/, "#{label_attr} />")
@@ -452,7 +454,7 @@ module QuizzesHelper
       answers.each { |k, v| res.sub! /\{\{#{k}\}\}/, h(v) }
       res.gsub! /\{\{question_[^}]+\}\}/, ""
     end
-
+    
     # all of our manipulation lost this flag - reset it
     res.html_safe
   end

@@ -195,7 +195,7 @@
             question: question,
             answers: @stored_params,
             answer_list: answer_list,
-            editable: assessing
+            editable: assessing && !question_locked
           }) %>
         <% elsif question && hash_get(question, :question_type) == "multiple_dropdowns_question" %>
           <% answer_list = []
