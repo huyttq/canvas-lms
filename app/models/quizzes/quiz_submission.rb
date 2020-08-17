@@ -159,8 +159,20 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
 
         isCorrect = sd["points"] > 0
         if (isCorrect)
-          res[qid] = sd["text"]
           res[qid + '_locked'] = "true"
+
+          if sd.keys.any? {|i| i.start_with? 'answer_for_'}
+            # multiple-answer question
+            multiple_answer_keys = sd.keys.select {|i| i.start_with? 'answer_for_'}
+            question_guids = res.keys.select {|i| i.match /\A#{qid}_\S{32}\Z/ }
+            question_guids.each_with_index {|m, index| res[m] = sd[multiple_answer_keys[index]]}
+          elsif sd.keys.any? {|i| i == 'attachment_ids'}
+            # file-upload question
+            res[qid] = sd['attachment_ids']
+          else
+            # essay question
+            res[qid] = sd["text"]
+          end
         else
           # marked all unsatisfactory/unanswered questions
           res[qid + '_marked'] = "true" 
