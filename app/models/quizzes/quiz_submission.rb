@@ -157,7 +157,7 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
       last_submission.each { |sd|
         qid = 'question_' + sd["question_id"].to_s
 
-        isCorrect = sd["points"] > 0
+        isCorrect = sd["points"] >= 1
         if (isCorrect)
           res[qid + '_locked'] = "true"
 
