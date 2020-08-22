@@ -180,7 +180,7 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
           end                      
         }
       end 
-    rescue Exception => e
+    rescue => e
       logger.error "cannot generate temporary data #{e.inspect}"
     end
     
