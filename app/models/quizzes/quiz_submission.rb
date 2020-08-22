@@ -152,33 +152,37 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
     raise "Cannot view temporary data for completed quiz" if graded?
     res = (self.submission_data || {}).with_indifferent_access
     
-    unless self.submitted_attempts.last.nil?
-      last_submission = self.submitted_attempts.last.submission_data
-      last_submission.each { |sd|
-        qid = 'question_' + sd["question_id"].to_s
-
-        isCorrect = sd["points"] >= 1
-        if (isCorrect)
-          res[qid + '_locked'] = "true"
-
-          if sd.keys.any? {|i| i.start_with? 'answer_for_'}
-            # multiple-answer question
-            multiple_answer_keys = sd.keys.select {|i| i.start_with? 'answer_for_'}
-            question_guids = res.keys.select {|i| i.match /\A#{qid}_\S{32}\Z/ }
-            question_guids.each_with_index {|m, index| res[m] = sd[multiple_answer_keys[index]]}
-          elsif sd.keys.any? {|i| i == 'attachment_ids'}
-            # file-upload question
-            res[qid] = sd['attachment_ids']
+    begin
+      unless self.submitted_attempts.nil? && self.submitted_attempts.last.nil?
+        last_submission = self.submitted_attempts.last.submission_data
+        last_submission.each { |sd|
+          qid = 'question_' + sd["question_id"].to_s
+  
+          isCorrect = sd["points"] >= 1 #TODO: figure out how to check if the points equal to points defined in quiz question definition
+          if (isCorrect)
+            res[qid + '_locked'] = "true"
+  
+            if sd.keys.any? {|i| i.start_with? 'answer_for_'}
+              # multiple-answer question
+              multiple_answer_keys = sd.keys.select {|i| i.start_with? 'answer_for_'}
+              question_guids = res.keys.select {|i| i.match /\A#{qid}_\S{32}\Z/ }
+              question_guids.each_with_index {|m, index| res[m] = sd[multiple_answer_keys[index]]}
+            elsif sd.keys.any? {|i| i == 'attachment_ids'}
+              # file-upload question
+              res[qid] = sd['attachment_ids']
+            else
+              # essay question
+              res[qid] = sd["text"]
+            end
           else
-            # essay question
-            res[qid] = sd["text"]
-          end
-        else
-          # marked all unsatisfactory/unanswered questions
-          res[qid + '_marked'] = "true" 
-        end                      
-      }
-    end 
+            # marked all unsatisfactory/unanswered questions
+            res[qid + '_marked'] = "true" 
+          end                      
+        }
+      end 
+    rescue Exception => e
+      logger.error "cannot generate temporary data #{e.inspect}"
+    end
     
     res
   end
