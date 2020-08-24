@@ -305,7 +305,7 @@
                 </legend>
                 <% list = hash_get(question, :answers, []) %>
                 <%= render :partial => "quizzes/quizzes/multi_answer", :collection => list, :locals =>
-                    {:question => question, :right_answers => right_answers, :question_type => question_type, :user_answer => user_answer} %>
+                    {:question => question, :right_answers => right_answers, :question_type => question_type, :user_answer => user_answer, :editable => !question_locked} %>
               </fieldset>
             <% elsif question_type.display_answers == "single" %>
               <%= render :partial => "quizzes/quizzes/single_answer", :locals =>
