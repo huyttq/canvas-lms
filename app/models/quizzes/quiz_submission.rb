@@ -155,10 +155,13 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
     begin
       unless self.submitted_attempts.nil? && self.submitted_attempts.last.nil?
         last_submission = self.submitted_attempts.last.submission_data
-        last_submission.each { |sd|
+        last_submission.each { |tmp|
+          # multiple choice question use symbol not string
+          sd = tmp.stringify_keys
+
           qid = 'question_' + sd["question_id"].to_s
-  
           isCorrect = sd["points"] >= 1 #TODO: figure out how to check if the points equal to points defined in quiz question definition
+
           if (isCorrect)
             res[qid + '_locked'] = "true"
   
@@ -171,7 +174,7 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
               # file-upload question
               res[qid] = sd['attachment_ids']
             else
-              # essay question
+              # essay question/multiple choice
               res[qid] = sd["text"]
             end
           else
