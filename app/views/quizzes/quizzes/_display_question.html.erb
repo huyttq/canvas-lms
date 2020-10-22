@@ -61,13 +61,13 @@
                      !!js_env.dig(:MASTER_COURSE_DATA, "restricted_by_master_course")
   content_is_locked = object_is_locked && js_env.dig(:MASTER_COURSE_DATA, "master_course_restrictions", :content)
   points_are_locked = object_is_locked && js_env.dig(:MASTER_COURSE_DATA, "master_course_restrictions", :points)
+  question_locked = @stored_params && @stored_params["question_#{hash_get(question, :id)}_locked"].present?
 %>
-<div role="region" aria-label="<%= t("Question") %>" class="quiz_sortable question_holder <%= "group" if in_group %>" id="<%= "question_template" unless question %>" style="<%= hidden unless question %>" data-group-id="<%= group_id %>">
+<div style="display: <%= 'none' if question_locked %>" role="region" aria-label="<%= t("Question") %>" class="quiz_sortable question_holder <%= "group" if in_group %>" id="<%= "question_template" unless question %>" style="<%= hidden unless question %>" data-group-id="<%= group_id %>">
   <div style="display: block; height: 1px; overflow: hidden;">&nbsp;</div>
   <a name="question_<%= hash_get(question, :id, "blank") %>"></a>
   <% 
     marked = assessing && @stored_params && @stored_params["question_#{hash_get(question, :id)}_marked"].present? 
-    question_locked = @stored_params && @stored_params["question_#{hash_get(question, :id)}_locked"].present?
   %>
   
   <div class="display_question question <%= question_type.question_type %> <%= "marked" if marked %> <%= "correct" if correct && display_correct_answers %> <%= "incorrect" if incorrect %> <%= "unanswered" if unanswered %> <%= "partial_credit" if partial_credit %>" id="question_<%= hash_get(question, :id, "new") %>">

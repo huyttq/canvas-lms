@@ -151,27 +151,43 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
     raise "Cannot view temporary data for completed quiz" unless !self.completed?
     raise "Cannot view temporary data for completed quiz" if graded?
     res = (self.submission_data || {}).with_indifferent_access
+    # logger.info "----------RESULT before mod: #{res.inspect}"
     
     begin
       unless self.submitted_attempts.nil? && self.submitted_attempts.last.nil?
+        lastAttempt = self.submitted_attempts.last
+        quizData = lastAttempt.quiz_data
+
         last_submission = self.submitted_attempts.last.submission_data
         last_submission.each { |tmp|
+          #tmp {:correct=>true, :points=>1.0, :question_id=>13, :text=>"", :answer_for_question1=>2703, :answer_id_for_question1=>2703, :answer_for_question2=>3305, :answer_id_for_question2=>3305}
           # multiple choice question use symbol not string
           sd = tmp.stringify_keys
+          logger.debug "----------tmp.stringify_keys: #{tmp.inspect}"
+
+          questionDef = quizData.find {|q| q["id"] == sd["question_id"]}
+          logger.debug "----------questionDef: #{questionDef.inspect}"
 
           qid = 'question_' + sd["question_id"].to_s
-          isCorrect = sd["points"] >= 1 #TODO: figure out how to check if the points equal to points defined in quiz question definition
+          isCorrect = sd["correct"] == true
+          if isCorrect == false
+            isCorrect = sd["points"] >= questionDef["points_possible"]
+          end
 
           if (isCorrect)
-            res[qid + '_locked'] = "true"
+            res[qid + '_locked'] = "true" # hide it from user so he/she cannot update correct answers
   
-            if sd.keys.any? {|i| i.start_with? 'answer_for_'}
-              # multiple-answer question
-              multiple_answer_keys = sd.keys.select {|i| i.start_with? 'answer_for_'}
-              question_guids = res.keys.select {|i| i.match /\A#{qid}_\S{32}\Z/ }
+            if questionDef["question_type"] == 'multiple_dropdowns_question'
+              question_guids = questionDef["question_text"].scan /#{qid}_\S{32}/
+              multiple_answer_keys = sd.keys.select {|i| i.start_with? 'answer_id_for_'}
               question_guids.each_with_index {|m, index| res[m] = sd[multiple_answer_keys[index]]}
-            elsif sd.keys.any? {|i| i == 'attachment_ids'}
-              # file-upload question
+
+            elsif questionDef["question_type"] == 'multiple_answers_question'
+              # {"correct"=>true, "points"=>1.0, "question_id"=>12, "text"=>"", "answer_208"=>"1", "answer_4976"=>"0", "answer_4019"=>"1", "answer_8312"=>"0"}
+              multiple_answer_keys = sd.keys.select {|i| i.start_with? 'answer_'}
+              multiple_answer_keys.each {|k| res[qid + '_' + k] = sd[k].to_i}
+              
+            elsif questionDef["question_type"] == 'file_upload_question'
               res[qid] = sd['attachment_ids']
             else
               # essay question/multiple choice
