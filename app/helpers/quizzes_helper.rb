@@ -482,6 +482,10 @@ module QuizzesHelper
         if (opt_tag = s.children.css("option[value='#{a}']").first)
           opt_tag["selected"] = "selected"
         end
+
+        if hash_get(answers, "#{s["name"]}_locked") == "true"
+          s.set_attribute('disabled', 'disabled')
+        end
       else
         # If existing answer is one of the options, replace it with a span
         if (opt_tag = s.children.css("option[value='#{a}']").first)

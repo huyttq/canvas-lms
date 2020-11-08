@@ -151,7 +151,7 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
     raise "Cannot view temporary data for completed quiz" unless !self.completed?
     raise "Cannot view temporary data for completed quiz" if graded?
     res = (self.submission_data || {}).with_indifferent_access
-    # logger.info "----------RESULT before mod: #{res.inspect}"
+    logger.info "----------RESULT before mod: #{res.inspect}"
     
     begin
       unless self.submitted_attempts.nil? && self.submitted_attempts.last.nil?
@@ -169,10 +169,7 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
           logger.debug "----------questionDef: #{questionDef.inspect}"
 
           qid = 'question_' + sd["question_id"].to_s
-          isCorrect = sd["correct"] == true
-          if isCorrect == false
-            isCorrect = sd["points"] >= questionDef["points_possible"]
-          end
+          isCorrect = sd["correct"] == true || sd["points"] >= questionDef["points_possible"]
 
           if (isCorrect)
             res[qid + '_locked'] = "true" # hide it from user so he/she cannot update correct answers
@@ -195,13 +192,29 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
             end
           else
             # marked all unsatisfactory/unanswered questions
-            res[qid + '_marked'] = "true" 
-          end                      
+            res[qid + '_marked'] = "true"
+            if questionDef["question_type"] == 'multiple_dropdowns_question'
+              answers = questionDef["answers"]
+
+              question_guids = questionDef["question_text"].scan /#{qid}_\S{32}/
+              multiple_answer_keys = sd.keys.select {|i| i.start_with? 'answer_id_for_'}
+              question_guids.each_with_index { |guid, index| 
+                answerId = sd[multiple_answer_keys[index]]
+                answer = answers.find {|q| q["id"] == answerId}
+
+                if answer["weight"] == 100.0
+                  res[guid] = answerId
+                  res["#{guid}_locked"] = "true" # hide it from user so he/she cannot update correct answers
+                end
+              }
+            end
+          end
         }
       end 
     rescue => e
       logger.error "cannot generate temporary data #{e.inspect}"
     end
+    logger.debug "#############################RESULT AFTER mod: #{res.inspect}"
     
     res
   end
