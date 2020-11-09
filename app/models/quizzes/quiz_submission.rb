@@ -151,10 +151,15 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
     raise "Cannot view temporary data for completed quiz" unless !self.completed?
     raise "Cannot view temporary data for completed quiz" if graded?
     res = (self.submission_data || {}).with_indifferent_access
-    logger.info "----------RESULT before mod: #{res.inspect}"
+    logger.debug "----------RESULT before mod: #{res.inspect}"
     
     begin
       unless self.submitted_attempts.nil? && self.submitted_attempts.last.nil?
+        currentNumOfAttempts = self.submitted_attempts.count + 1
+        if currentNumOfAttempts % 3 == 1 # reset for attempt 1, 4, 7,...
+          return res
+        end
+
         lastAttempt = self.submitted_attempts.last
         quizData = lastAttempt.quiz_data
 
@@ -216,7 +221,7 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
     end
     logger.debug "#############################RESULT AFTER mod: #{res.inspect}"
     
-    res
+    return res
   end
 
   def question_answered?(id)
