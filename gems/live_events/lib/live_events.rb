@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #
 # Copyright (C) 2015 - present Instructure, Inc.
 #
@@ -32,6 +34,14 @@ module LiveEvents
       @settings.call
     end
 
+    def aws_credentials=(aws_credentials)
+      @aws_credentials = aws_credentials
+    end
+
+    def aws_credentials(config)
+      @aws_credentials.call(config)
+    end
+
     def max_queue_size=(size)
       @max_queue_size = size
     end
@@ -45,7 +55,7 @@ module LiveEvents
     require 'live_events/async_worker'
 
     def get_context
-      Thread.current[:live_events_ctx].try(:clone)
+      materialized_context&.clone
     end
 
     # Set (on the current thread) the context to be used for future calls to post_event.
@@ -60,7 +70,7 @@ module LiveEvents
     # Post an event for the current account.
     def post_event(event_name:, payload:, time: Time.now, context: nil, partition_key: nil) # rubocop:disable Rails/SmartTimeZone
       if (LiveEvents::Client.config)
-        context ||= Thread.current[:live_events_ctx]
+        context ||= materialized_context
         client.post_event(event_name, payload, time, context, partition_key)
       end
     end
@@ -90,6 +100,14 @@ module LiveEvents
     end
 
     private
+
+    def materialized_context
+      context = Thread.current[:live_events_ctx]
+      if context.is_a?(Proc)
+        context = Thread.current[:live_events_ctx] = context.call
+      end
+      context
+    end
 
     def client
       if @client && !new_client?

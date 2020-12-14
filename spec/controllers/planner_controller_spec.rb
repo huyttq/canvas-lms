@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #
 # Copyright (C) 2018 - present Instructure, Inc.
 #
@@ -20,6 +22,7 @@ require_relative '../sharding_spec_helper'
 
 describe PlannerController do
   before :once do
+    Account.find_or_create_by!(id: 0).update(name: 'Dummy Root Account', workflow_state: 'deleted', root_account_id: nil)
     course_with_teacher(active_all: true)
     student_in_course(active_all: true)
     @group = @course.assignment_groups.create(:name => "some group")
@@ -48,7 +51,6 @@ describe PlannerController do
   context "as student" do
     before :each do
       user_session(@student)
-      @course.root_account.enable_feature!(:student_planner)
     end
 
     describe "GET #index" do
@@ -722,7 +724,7 @@ describe PlannerController do
       context "with user id" do
         it "allows a student to query her own planner items" do
           get :index, params: {user_id: 'self', per_page: 1}
-          expect(response).to be_success
+          expect(response).to be_successful
           link = Api.parse_pagination_links(response.headers['Link']).detect{|p| p[:rel] == "next"}
           expect(link[:uri].path).to include "/api/v1/users/self/planner/items"
         end
@@ -732,7 +734,7 @@ describe PlannerController do
           user_session(observer)
           UserObservationLink.create_or_restore(observer: observer, student: @student, root_account: Account.default)
           get :index, params: {user_id: @student.to_param, per_page: 1}
-          expect(response).to be_success
+          expect(response).to be_successful
           link = Api.parse_pagination_links(response.headers['Link']).detect{|p| p[:rel] == "next"}
           expect(link[:uri].path).to include "/api/v1/users/#{@student.to_param}/planner/items"
         end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #
 # Copyright (C) 2011 - present Instructure, Inc.
 #
@@ -588,10 +590,25 @@ describe AssignmentsController do
             url: launch_url
           )
         end
+
+        let(:key) do
+          DeveloperKey.create!(
+            scopes: [
+              TokenScopes::LTI_AGS_LINE_ITEM_SCOPE,
+              TokenScopes::LTI_AGS_LINE_ITEM_READ_ONLY_SCOPE,
+              TokenScopes::LTI_AGS_RESULT_READ_ONLY_SCOPE,
+              TokenScopes::LTI_AGS_SCORE_SCOPE
+            ]
+          )
+        end
+
         let(:external_tool) do
           tool = external_tool_model(
             context: assignment.course,
-            opts: { url: launch_url }
+            opts: {
+              url: launch_url,
+              developer_key: key
+            }
           )
           tool.settings[:use_1_3] = true
           tool.save!
@@ -608,8 +625,14 @@ describe AssignmentsController do
           external_tool
         end
 
-        it 'renders a helpful error to the user' do
-          expect(subject).to render_template 'shared/errors/error_with_details'
+        it { is_expected.to be_successful }
+
+        it 'creates the default line item' do
+          expect {
+            subject
+          }.to change {
+            Lti::LineItem.where(assignment: assignment).count
+          }.from(0).to(1)
         end
       end
     end
@@ -675,6 +698,13 @@ describe AssignmentsController do
       expect(response).to be_successful
       expect(assigns[:current_user_submission]).not_to be_nil
       expect(assigns[:assigned_assessments]).to eq []
+    end
+
+    it "doesn't explode when fielding a JSON request" do
+      user_session(@student)
+      get 'show', params: {:course_id => @course.id, :id => @assignment.id}, format: :json
+      expect(response.body).to include("endpoint does not support json")
+      expect(response.code.to_i).to eq(400)
     end
 
     it "should assign (active) peer review requests" do
@@ -1009,6 +1039,16 @@ describe AssignmentsController do
           @assignment.update!(submission_types: "external_tool", external_tool_tag: ContentTag.new)
           get :show, params: {course_id: @course.id, id: @assignment.id}
           expect(assigns[:js_env]).to have_key(:speed_grader_url)
+        end
+      end
+
+      describe "mastery_scales" do
+        it "should set mastery_scales env when account has mastery scales enabled" do
+          @course.root_account.enable_feature!(:account_level_mastery_scales)
+          outcome_proficiency_model(@course)
+          get :show, params: {course_id: @course.id, id: @assignment.id}
+          expect(assigns[:js_env]).to have_key :ACCOUNT_LEVEL_MASTERY_SCALES
+          expect(assigns[:js_env]).to have_key :MASTERY_SCALE
         end
       end
     end

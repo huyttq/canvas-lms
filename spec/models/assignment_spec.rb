@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #
 # Copyright (C) 2011 - present Instructure, Inc.
 #
@@ -1110,11 +1112,6 @@ describe Assignment do
 
     let(:assignment) { Assignment.create!(name: 'assignment with tool settings', context: course) }
 
-    before do
-      allow_any_instance_of(Lti::AssignmentSubscriptionsHelper).to receive(:create_subscription) { SecureRandom.uuid }
-      allow_any_instance_of(Lti::AssignmentSubscriptionsHelper).to receive(:destroy_subscription) { {} }
-    end
-
     it 'returns a hash of three identifying lti codes' do
       assignment.tool_settings_tool = message_handler
       assignment.save!
@@ -1124,11 +1121,6 @@ describe Assignment do
 
   describe '#tool_settings_tool_name' do
     let(:assignment) { Assignment.create!(name: 'assignment with tool settings', context: course) }
-
-    before do
-      allow_any_instance_of(Lti::AssignmentSubscriptionsHelper).to receive(:create_subscription) { SecureRandom.uuid }
-      allow_any_instance_of(Lti::AssignmentSubscriptionsHelper).to receive(:destroy_subscription) { {} }
-    end
 
     it 'returns the name of the tool proxy' do
       expected_name = 'test name'
@@ -1151,14 +1143,6 @@ describe Assignment do
   end
 
   describe '#tool_settings_tool=' do
-    let(:stub_response){ double(code: 200, body: {}.to_json, parsed_response: {'Id' => 'test-id'}, ok?: true) }
-    let(:subscription_helper){ class_double(Lti::AssignmentSubscriptionsHelper).as_stubbed_const }
-    let(:subscription_helper_instance){ double(destroy_subscription: true, create_subscription: true) }
-
-    before(:each) do
-      allow(subscription_helper).to receive_messages(new: subscription_helper_instance)
-    end
-
     it "should allow ContextExternalTools through polymorphic association" do
       setup_assignment_with_homework
       tool = @course.context_external_tools.create!(name: "a", url: "http://www.google.com", consumer_key: '12345', shared_secret: 'secret')
@@ -1167,19 +1151,8 @@ describe Assignment do
       expect(@assignment.tool_settings_tool).to eq(tool)
     end
 
-    it 'destroys subscriptions when they exist' do
-      setup_assignment_with_homework
-      expect(subscription_helper_instance).to receive(:destroy_subscription)
-      course.assignments << @assignment
-      @assignment.tool_settings_tool = message_handler
-      @assignment.save!
-      @assignment.tool_settings_tool = nil
-      @assignment.save!
-    end
-
     it "destroys tool unless tool is 'ContextExternalTool'" do
       setup_assignment_with_homework
-      expect(subscription_helper_instance).not_to receive(:destroy_subscription)
       tool = @course.context_external_tools.create!(name: "a", url: "http://www.google.com", consumer_key: '12345', shared_secret: 'secret')
       @assignment.tool_settings_tool = tool
       @assignment.save!
@@ -1317,10 +1290,8 @@ describe Assignment do
 
       let(:assignment) { assignment_model }
       let(:lookup) { assignment.assignment_configuration_tool_lookups.first }
-      let(:subscription_helper) { double(create_subscription: SecureRandom.uuid) }
 
       before do
-        allow(Lti::AssignmentSubscriptionsHelper).to receive(:new).and_return(subscription_helper)
         assignment.assignment_configuration_tool_lookups.create!(
           context_type: 'Account',
           tool_vendor_code: product_family.vendor_code,
@@ -1453,6 +1424,40 @@ describe Assignment do
         updated_at: now
       )
       described_class.clean_up_importing_assignments
+    end
+  end
+
+  describe "event: failed_to_duplicate" do
+    subject { described_class }
+
+    let(:duplicating_assignment) do
+      @course.assignments.create!(workflow_state: 'duplicating', **assignment_valid_attributes)
+    end
+
+    describe ".finish_duplicating" do
+      it "update to published" do
+        expect(duplicating_assignment.workflow_state).to eq 'duplicating'
+        duplicating_assignment.finish_duplicating
+        expect(duplicating_assignment.workflow_state).to eq 'unpublished'
+      end
+    end
+
+    describe ".fail_to_duplicate" do
+      it "update to failed_to_duplicate" do
+        expect(duplicating_assignment.workflow_state).to eq 'duplicating'
+        duplicating_assignment.fail_to_duplicate
+        expect(duplicating_assignment.workflow_state).to eq 'failed_to_duplicate'
+      end
+    end
+
+    describe ".fail_to_duplicate and .finish_duplicating" do
+      it "update to failed_to_duplicate" do
+        expect(duplicating_assignment.workflow_state).to eq 'duplicating'
+        duplicating_assignment.fail_to_duplicate
+        expect(duplicating_assignment.workflow_state).to eq 'failed_to_duplicate'
+        duplicating_assignment.finish_duplicating
+        expect(duplicating_assignment.workflow_state).to eq 'unpublished'
+      end
     end
   end
 
@@ -2267,7 +2272,7 @@ describe Assignment do
         end
 
         it "inserts a record" do
-          expect(Auditors::GradeChange::Stream).to receive(:insert).once
+          expect(Auditors::GradeChange).to receive(:record).once
           assignment.grade_student(student, grade: 10, grader: teacher)
         end
       end
@@ -2278,7 +2283,9 @@ describe Assignment do
         end
 
         it "inserts a record" do
-          expect(Auditors::GradeChange::Stream).to receive(:insert).once
+          # once just for ther #assignment_muted_changed call as part of "handle_posted_at_changed"
+          # second time is for the grade change on the record.
+          expect(Auditors::GradeChange).to receive(:record).twice
           assignment.grade_student(student, grade: 10, grader: teacher)
         end
       end
@@ -2588,6 +2595,8 @@ describe Assignment do
   end
 
   context "needs_grading_count" do
+    specs_require_cache(:redis_cache_store)
+
     before :once do
       setup_assignment_with_homework
     end
@@ -2602,35 +2611,44 @@ describe Assignment do
     it "should update when section (and its enrollments) are moved" do
       @assignment.update_attribute(:updated_at, 1.minute.ago)
       expect(@assignment.needs_grading_count).to eql(1)
-      enable_cache do
-        expect(Assignments::NeedsGradingCountQuery.new(@assignment, nil).manual_count).to be(1)
-        course2 = @course.account.courses.create!
-        e = @course.enrollments.where(user_id: @user.id).first.course_section
-        e.move_to_course(course2)
-        @assignment.reload
-        expect(Assignments::NeedsGradingCountQuery.new(@assignment, nil).manual_count).to be(0)
-      end
+      expect(Assignments::NeedsGradingCountQuery.new(@assignment, nil).manual_count).to be(1)
+      course2 = @course.account.courses.create!
+      e = @course.enrollments.where(user_id: @user.id).first.course_section
+      e.move_to_course(course2)
+      @assignment.reload
+      expect(Assignments::NeedsGradingCountQuery.new(@assignment, nil).manual_count).to be(0)
       expect(@assignment.needs_grading_count).to eql(0)
     end
 
     it "updated_at should be set when needs_grading_count changes due to a submission" do
+      @assignment.update_attribute(:muted, false) # otherwise this gets saved by another callback because it thinks all the submissions are posted
       expect(@assignment.needs_grading_count).to eql(1)
       old_timestamp = Time.now.utc - 1.minute
       Assignment.where(:id => @assignment).update_all(:updated_at => old_timestamp)
+      old_cache_key = @assignment.cache_key(:needs_grading)
+
       @assignment.grade_student(@user, grade: "0", grader: @teacher)
-      @assignment.reload
-      expect(@assignment.needs_grading_count).to eql(0)
-      expect(@assignment.updated_at).to be > old_timestamp
+      Timecop.freeze(1.minute.from_now) do
+        @assignment.reload
+        expect(@assignment.needs_grading_count).to eql(0)
+        expect(@assignment.updated_at).to eq old_timestamp
+        expect(@assignment.cache_key(:needs_grading)).to be > old_cache_key
+      end
     end
 
-    it "updated_at should be set when needs_grading_count changes due to an enrollment change" do
-      old_timestamp = Time.now.utc - 1.minute
+    it "needs_grading cache_key should be reset when needs_grading_count changes due to an enrollment change" do
       expect(@assignment.needs_grading_count).to eql(1)
+      old_timestamp = Time.now.utc - 1.minute
       Assignment.where(:id => @assignment).update_all(:updated_at => old_timestamp)
+      old_cache_key = @assignment.cache_key(:needs_grading)
+
       @course.enrollments.where(user_id: @user).first.destroy
-      @assignment.reload
-      expect(@assignment.needs_grading_count).to eql(0)
-      expect(@assignment.updated_at).to be > old_timestamp
+      Timecop.freeze(1.minute.from_now) do
+        @assignment.reload
+        expect(@assignment.needs_grading_count).to eql(0)
+        expect(@assignment.updated_at).to eq old_timestamp
+        expect(@assignment.cache_key(:needs_grading)).to be > old_cache_key
+      end
     end
   end
 
@@ -3152,7 +3170,9 @@ describe Assignment do
 
     describe "grade change audit records" do
       it "continues to insert grade change records when assignment is muted" do
-        expect(Auditors::GradeChange::Stream).to receive(:insert).once
+        # once just for ther #assignment_muted_changed call as part of "handle_posted_at_changed"
+        # second time is for the grade change on the record.
+        expect(Auditors::GradeChange).to receive(:record).twice
         @assignment.grade_student(@student, grade: 10, grader: @teacher)
       end
 
@@ -5117,7 +5137,7 @@ describe Assignment do
 
     context "varied due date notifications" do
       before :once do
-        @teacher.communication_channels.create(:path => "teacher@instructure.com").confirm!
+        communication_channel(@teacher, {username: 'teacher@instructure.com', active_cc: true})
 
         @studentA = user_with_pseudonym(:active_all => true, :name => 'StudentA', :username => 'studentA@instructure.com')
         @ta = user_with_pseudonym(:active_all => true, :name => 'TA1', :username => 'ta1@instructure.com')
@@ -6460,7 +6480,7 @@ describe Assignment do
       zip.open
     end
 
-    def generate_comments(user)
+    def generate_comments(user, attachment_id = nil)
       tempfile = zip_submissions
 
       # create an uploaded file with the zipped submissions, as would be uploaded by the user
@@ -6468,7 +6488,8 @@ describe Assignment do
 
       @assignment.generate_comments_from_files_later(
         {uploaded_data: uploaded_data},
-        user
+        user,
+        attachment_id
       )
 
       # invoke the job that was created by the previous step
@@ -6485,6 +6506,26 @@ describe Assignment do
 
       expect(results[:comments].map { |c| c[:submission][:user_id] }).to eq [s1.id]
       expect(results[:ignored_files]).to be_empty
+    end
+
+    it "accepts an optional attachment ID to fetch an existing attachment instead of generating a new one" do
+      student = @students.first
+      submit_homework(student)
+
+      uploaded_data = ActionDispatch::Http::UploadedFile.new(tempfile: zip_submissions, filename: "submissions.zip")
+      attachment = @teacher.attachments.create!(uploaded_data: uploaded_data)
+      generate_comments(@teacher, attachment.id)
+      submission = @assignment.submission_reupload_progress.results.dig(:comments, 0, :submission)
+      expect(submission[:user_id]).to eq student.id
+    end
+
+    it "assigns an anonymous_id for each submission" do
+      student = @students.first
+      submit_homework(student)
+
+      generate_comments(@teacher)
+      submission = @assignment.submission_reupload_progress.results.dig(:comments, 0, :submission)
+      expect(submission).to have_key :anonymous_id
     end
 
     it "should work for groups" do
@@ -7447,22 +7488,56 @@ describe Assignment do
     end
   end
 
+  describe '.from_secure_lti_params' do
+    subject { Assignment.from_secure_lti_params(secure_params) }
+
+    let_once(:assignment) { assignment_model }
+
+    let(:jwt_body) { { lti_assignment_id: assignment.lti_context_id } }
+    let(:secure_params) { Canvas::Security.create_jwt(jwt_body) }
+
+    it { is_expected.to eq assignment }
+
+    context 'when no matching assignment is found' do
+      before { jwt_body.merge!({lti_assignment_id: SecureRandom.uuid}) }
+
+      it { is_expected.to be_nil }
+    end
+
+    context 'when secure params are nil' do
+      let(:secure_params) { nil }
+
+      it { is_expected.to be_nil }
+    end
+
+    context 'when secure params have invalid signature' do
+      let(:secure_params) { "#{super()}added" }
+
+      it { is_expected.to be_nil }
+    end
+
+    context 'when secure params are not a JWT' do
+      let(:secure_params) { 'notajwt' }
+
+      it { is_expected.to be_nil }
+    end
+  end
+
   describe '.remove_user_as_final_grader' do
     it 'calls .remove_user_as_final_grader_immediately in a delayed job' do
-      expect(Assignment).to receive(:send_later_if_production_enqueue_args).
-        with(:remove_user_as_final_grader_immediately, any_args)
+      expect(Assignment).to receive(:delay_if_production).and_return(Assignment)
+      expect(Assignment).to receive(:remove_user_as_final_grader_immediately)
       Assignment.remove_user_as_final_grader(@teacher.id, @course.id)
     end
 
     it 'runs the job in a strand, stranded by the root account ID' do
       delayed_job_args = {
         strand: "Assignment.remove_user_as_final_grader:#{@course.root_account.global_id}",
-        max_attempts: 1,
         priority: Delayed::LOW_PRIORITY
       }
 
-      expect(Assignment).to receive(:send_later_if_production_enqueue_args).
-        with(:remove_user_as_final_grader_immediately, delayed_job_args, any_args)
+      expect(Assignment).to receive(:delay_if_production).with(**delayed_job_args).and_return(Assignment)
+      expect(Assignment).to receive(:remove_user_as_final_grader_immediately)
       Assignment.remove_user_as_final_grader(@teacher.id, @course.id)
     end
   end
@@ -7520,9 +7595,7 @@ describe Assignment do
 
     it "doesn't reference multiple shards when accessed from a different shard" do
       @assignment = @course.assignments.create! points_possible: 10
-      allow(Assignment.connection).to receive(:use_qualified_names?).and_return(true)
       @shard1.activate do
-        allow(Assignment.connection).to receive(:use_qualified_names?).and_return(true)
         sql = @course.assignments.with_student_submission_count.to_sql
         expect(sql).to be_include(Shard.default.name)
         expect(sql).not_to be_include(@shard1.name)
@@ -8022,7 +8095,9 @@ describe Assignment do
           end
 
           it "inserts a single grade change record" do
-            expect(Auditors::GradeChange::Stream).to receive(:insert).once
+            # once just for ther #assignment_muted_changed call as part of "handle_posted_at_changed"
+            # second time is for the grade change on the record.
+            expect(Auditors::GradeChange).to receive(:record).twice
             assignment.grade_student(student1, grade: 10, grader: teacher)
           end
 
@@ -8044,7 +8119,9 @@ describe Assignment do
           end
 
           it "inserts a single grade change record" do
-            expect(Auditors::GradeChange::Stream).to receive(:insert).once
+            # once just for ther #assignment_muted_changed call as part of "handle_posted_at_changed"
+            # second time is for the grade change on the record.
+            expect(Auditors::GradeChange).to receive(:record).twice
             assignment.grade_student(student1, grade: 10, grader: teacher)
           end
         end
@@ -8841,6 +8918,76 @@ describe Assignment do
               expect(subject.line_items.first.resource_link).not_to eq resource_link
             end
           end
+
+          describe '#prepare_for_ags_if_needed!' do
+            subject { assignment }
+
+            context 'when the assignment is not AGS ready' do
+              before do
+                # assignments configured with LTI 1.1 will not have
+                # LineItem or ResouceLink records prior to the LTI 1.3
+                # launch.
+                assignment.line_items.destroy_all
+
+                Lti::ResourceLink.where(
+                  resource_link_id: assignment.lti_context_id
+                ).destroy_all
+
+                assignment.update!(lti_context_id: SecureRandom.uuid)
+
+                assignment.prepare_for_ags_if_needed!(tool)
+              end
+
+              it 'creates the default line item' do
+                expect(subject.line_items).to be_present
+              end
+
+              it 'creates the LTI resource link' do
+                expect(
+                  Lti::ResourceLink.where(
+                    resource_link_id: subject.lti_context_id
+                  )
+                ).to be_present
+              end
+            end
+
+            shared_examples_for 'a method that does not change AGS columns' do
+              it 'does not recreate the default line item' do
+                expect {
+                  assignment.prepare_for_ags_if_needed!(tool)
+                }.not_to change { assignment.line_items.first.id }
+              end
+
+              it 'does not recreate the LTI resource link' do
+                expect {
+                  assignment.prepare_for_ags_if_needed!(tool)
+                }.not_to change {
+                  Lti::ResourceLink.where(resource_link_id: subject.lti_context_id).
+                    first.
+                    id
+                }
+              end
+            end
+
+            context 'when the tool does not use 1.3' do
+              before do
+                tool.use_1_3 = false
+                tool.save!
+              end
+
+              it_behaves_like 'a method that does not change AGS columns'
+            end
+
+            context 'when the tool does not have a developer key' do
+              before { tool.update!(developer_key: nil) }
+
+              it_behaves_like 'a method that does not change AGS columns'
+            end
+
+            context 'when the assignment already has line items' do
+              it_behaves_like 'a method that does not change AGS columns'
+            end
+          end
         end
 
         context 'and resource link and line item exist' do
@@ -8959,12 +9106,31 @@ describe Assignment do
           expect(assignment.line_items).to be_empty
         end
 
-        context 'but when a LTI 1.3 tool is subsequently added' do
+        context 'but when a LTI 1.3 tool is subsequently added with an ID' do
           before do
             assignment.update!(external_tool_tag_attributes: { content: tool })
           end
 
           it_behaves_like 'line item and resource link existence check'
+        end
+
+        context 'but when an LTI 1.3 tool is added with a URL' do
+          before do
+            assignment.update!(external_tool_tag_attributes: { url: tool.url })
+            assignment.external_tool_tag.update_attribute(:content_id, nil)
+            assignment.external_tool_tag.update_attribute(:content_type, nil)
+            assignment.save!
+          end
+
+          context 'and an LTI 1.1 and LTI 1.3 tool exist with the same URL' do
+            before do
+              lti_1_1_tool = tool.dup
+              lti_1_1_tool.use_1_3 = false
+              lti_1_1_tool.save!
+            end
+
+            it_behaves_like 'line item and resource link existence check'
+          end
         end
       end
     end
@@ -9015,7 +9181,7 @@ describe Assignment do
 
     context "when the account has SIS-related features active and the setting enabled" do
       before(:once) do
-        Account.site_admin.enable_feature!(:new_sis_integrations)
+        account.enable_feature!(:new_sis_integrations)
         account.enable_feature!(:disable_post_to_sis_when_grading_period_closed)
         account.settings[:disable_post_to_sis_when_grading_period_closed] = true
         account.save!
@@ -9123,7 +9289,7 @@ describe Assignment do
       end
     end
 
-    it "does not run when the site-admin 'new_sis_integrations' flag is not enabled" do
+    it "does not run when the root account 'new_sis_integrations' flag is not enabled" do
       account.enable_feature!(:disable_post_to_sis_when_grading_period_closed)
       account.settings[:disable_post_to_sis_when_grading_period_closed] = true
       account.save!
@@ -9134,7 +9300,7 @@ describe Assignment do
     end
 
     it "does not run when the feature flag governing the setting is not enabled for the account" do
-      Account.site_admin.enable_feature!(:new_sis_integrations)
+      account.enable_feature!(:new_sis_integrations)
       account.settings[:disable_post_to_sis_when_grading_period_closed] = true
       account.save!
 
@@ -9144,7 +9310,7 @@ describe Assignment do
     end
 
     it "does not run when the account does not have the setting enabled" do
-      Account.site_admin.enable_feature!(:new_sis_integrations)
+      account.enable_feature!(:new_sis_integrations)
       account.enable_feature!(:disable_post_to_sis_when_grading_period_closed)
 
       expect {

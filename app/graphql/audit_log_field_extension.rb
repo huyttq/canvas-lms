@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #
 # Copyright (C) 2019 - present Instructure, Inc.
 #
@@ -31,7 +33,7 @@ class AuditLogFieldExtension < GraphQL::Schema::FieldExtension
 
     def log(entry, field_name)
       @dynamo.put_item(
-        table_name: "graphql_mutations",
+        table_name: AuditLogFieldExtension.ddb_table_name,
         item: {
           # TODO: this is where you redirect
           "object_id" => log_entry_id(entry, field_name),
@@ -46,6 +48,7 @@ class AuditLogFieldExtension < GraphQL::Schema::FieldExtension
         return_consumed_capacity: "TOTAL"
       )
     rescue Aws::DynamoDB::Errors::ServiceError => e
+      ::Canvas::Errors.capture_exception(:graphql_mutation_audit_logs, e)
       Rails.logger.error "Couldn't log mutation: #{e}"
     end
 
@@ -122,6 +125,10 @@ class AuditLogFieldExtension < GraphQL::Schema::FieldExtension
 
   def self.enabled?
     Canvas::DynamoDB::DatabaseBuilder.configured?(:auditors)
+  end
+
+  def self.ddb_table_name
+    Setting.get("graphql_mutations_ddb_table_name", "graphql_mutations")
   end
 
   def resolve(object:, arguments:, context:, **rest)

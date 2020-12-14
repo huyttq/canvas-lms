@@ -144,7 +144,6 @@ class FilesController < ApplicationController
 
   before_action :open_limited_cors, only: [:show]
 
-  prepend_around_action :load_pseudonym_from_policy, only: :create
   skip_before_action :verify_authenticity_token, only: :api_create
   before_action :verify_api_id, only: [
     :api_show, :api_create_success, :api_file_status, :api_update, :destroy, :reset_verifier
@@ -163,8 +162,7 @@ class FilesController < ApplicationController
   def quota
     get_quota
     if authorized_action(@context.attachments.temp_record, @current_user, :create)
-      h = ActionView::Base.new
-      h.extend ActionView::Helpers::NumberHelper
+      h = ActiveSupport::NumberHelper
       result = {
         :quota => h.number_to_human_size(@quota),
         :quota_used => h.number_to_human_size(@quota_used),
@@ -285,7 +283,7 @@ class FilesController < ApplicationController
   #
   # @returns [File]
   def api_index
-    Shackles.activate(:slave) do
+    GuardRail.activate(:secondary) do
       get_context
       verify_api_id unless @context.present?
       @folder = Folder.from_context_or_id(@context, params[:id])
@@ -363,6 +361,9 @@ class FilesController < ApplicationController
   end
 
   def react_files
+    if !request.format.html?
+      return render body: "endpoint does not support #{request.format.symbol}", status: :bad_request
+    end
     if authorized_action(@context, @current_user, [:read, :manage_files]) && tab_enabled?(@context.class::TAB_FILES)
       @contexts = [@context]
       get_all_pertinent_contexts(include_groups: true, cross_shard: true) if @context == @current_user
@@ -440,13 +441,16 @@ class FilesController < ApplicationController
   #
   def public_url
     @attachment = Attachment.find(params[:id])
+    verifier_checker = Attachments::Verification.new(@attachment)
+
     # if the attachment is part of a submisison, its 'context' will be the student that submmited the assignment.  so if  @current_user is a
     # teacher authorized_action(@attachment, @current_user, :download) will be false, we need to actually check if they have perms to see the
     # submission.
     @submission = Submission.active.find(params[:submission_id]) if params[:submission_id]
     # verify that the requested attachment belongs to the submission
     return render_unauthorized_action if @submission && !@submission.includes_attachment?(@attachment)
-    if @submission ? authorized_action(@submission, @current_user, :read) : authorized_action(@attachment, @current_user, :download)
+    if ((@submission && authorized_action(@submission, @current_user, :read)) || 
+        ((params[:verifier] && verifier_checker.valid_verifier_for_permission?(params[:verifier], :download, session)) || authorized_action(@attachment, @current_user, :download)))
       render :json  => { :public_url => @attachment.public_url(:secure => request.ssl?) }
     end
   end
@@ -486,7 +490,7 @@ class FilesController < ApplicationController
   end
 
   def show
-    Shackles.activate(:slave) do
+    GuardRail.activate(:secondary) do
       original_params = params.dup
       params[:id] ||= params[:file_id]
       get_context
@@ -561,7 +565,7 @@ class FilesController < ApplicationController
 
   def render_attachment(attachment)
     respond_to do |format|
-      if params[:preview] && attachment.mime_class == 'image'
+      if params[:download] && attachment.mime_class == 'image'
         format.html { redirect_to '/images/svg-icons/icon_lock.svg' }
       else
         if @files_domain
@@ -1255,9 +1259,11 @@ class FilesController < ApplicationController
       attachment = Attachment.active.where(id: params[:id], uuid: params[:uuid]).first if params[:id].present?
       thumb_opts = params.slice(:size)
       url = authenticated_thumbnail_url(attachment, thumb_opts)
-      instfs = attachment.instfs_hosted?
-      # only cache for half the time because of use_consistent_iat
-      Rails.cache.write(cache_key, [url, instfs], :expires_in => (attachment.url_ttl / 2)) if url
+      if url
+        instfs = attachment.instfs_hosted?
+        # only cache for half the time because of use_consistent_iat
+        Rails.cache.write(cache_key, [url, instfs], :expires_in => (attachment.url_ttl / 2))
+      end
     end
 
     if url && instfs && file_location_mode?

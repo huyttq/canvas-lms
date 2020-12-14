@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #
 # Copyright (C) 2011 - present Instructure, Inc.
 #
@@ -26,11 +28,113 @@ describe Account do
     it { is_expected.to have_one(:outcome_proficiency).dependent(:destroy) }
   end
 
-  it 'retrieves parent account\'s outcome proficiency' do
-    root_account = Account.create!
-    proficiency = outcome_proficiency_model(root_account)
-    subaccount = root_account.sub_accounts.create!
-    expect(subaccount.resolved_outcome_proficiency).to eq proficiency
+  context "domain_method" do
+    it "retrieves correct account domain" do
+      root_account = Account.create!
+      AccountDomain.create!(:host => 'canvas.instructure.com', :account => root_account)
+      expect(root_account.domain).to eq 'canvas.instructure.com'
+    end
+  end
+
+  context "resolved_outcome_proficiency_method" do
+    it "retrieves parent account's outcome proficiency" do
+      root_account = Account.create!
+      proficiency = outcome_proficiency_model(root_account)
+      subaccount = root_account.sub_accounts.create!
+      expect(subaccount.resolved_outcome_proficiency).to eq proficiency
+    end
+
+    it "ignores soft deleted calculation methods" do
+      root_account = Account.create!
+      method = outcome_proficiency_model(root_account)
+      subaccount = root_account.sub_accounts.create!
+      submethod = outcome_proficiency_model(subaccount)
+      submethod.update! workflow_state: :deleted
+      expect(subaccount.outcome_proficiency).to eq submethod
+      expect(subaccount.resolved_outcome_proficiency).to eq method
+    end
+
+    context "with the account_level_mastery_scales FF enabled" do
+      before do
+        @root_account = Account.create!
+        @root_account.enable_feature!(:account_level_mastery_scales)
+      end
+
+      it "returns a OutcomeProficiency default at the root level if no proficiency exists" do
+        subaccount = @root_account.sub_accounts.create!
+        expect(@root_account.outcome_proficiency).to eq nil
+        expect(subaccount.outcome_proficiency).to eq nil
+        expect(subaccount.resolved_outcome_proficiency).to eq OutcomeProficiency.find_or_create_default!(@root_account)
+        expect(@root_account.resolved_outcome_proficiency).to eq OutcomeProficiency.find_or_create_default!(@root_account)
+      end
+    end
+
+    context "with the account_level_mastery_scales FF disabled" do
+      it "can be nil" do
+        root_account = Account.create!
+        root_account.disable_feature!(:account_level_mastery_scales)
+        subaccount = root_account.sub_accounts.create!
+        expect(root_account.resolved_outcome_proficiency).to eq nil
+        expect(subaccount.resolved_outcome_proficiency).to eq nil
+      end
+    end
+  end
+
+  context 'resolved_outcome_calculation_method' do
+    it "retrieves parent account's outcome calculation method" do
+      root_account = Account.create!
+      method = OutcomeCalculationMethod.create! context: root_account, calculation_method: :highest
+      subaccount = root_account.sub_accounts.create!
+      expect(root_account.outcome_calculation_method).to eq method
+      expect(subaccount.outcome_calculation_method).to eq nil
+      expect(root_account.resolved_outcome_calculation_method).to eq method
+      expect(subaccount.resolved_outcome_calculation_method).to eq method
+    end
+
+    it "can override parent account's outcome calculation method" do
+      root_account = Account.create!
+      method = OutcomeCalculationMethod.create! context: root_account, calculation_method: :highest
+      subaccount = root_account.sub_accounts.create!
+      submethod = OutcomeCalculationMethod.create! context: subaccount, calculation_method: :latest
+      expect(root_account.outcome_calculation_method).to eq method
+      expect(subaccount.outcome_calculation_method).to eq submethod
+      expect(root_account.resolved_outcome_calculation_method).to eq method
+      expect(subaccount.resolved_outcome_calculation_method).to eq submethod
+    end
+
+    it "ignores soft deleted calculation methods" do
+      root_account = Account.create!
+      method = OutcomeCalculationMethod.create! context: root_account, calculation_method: :highest
+      subaccount = root_account.sub_accounts.create!
+      submethod = OutcomeCalculationMethod.create! context: subaccount, calculation_method: :latest, workflow_state: :deleted
+      expect(subaccount.outcome_calculation_method).to eq submethod
+      expect(subaccount.resolved_outcome_calculation_method).to eq method
+    end
+
+    context "with the account_level_mastery_scales FF enabled" do
+      before do
+        @root_account = Account.create!
+        @root_account.enable_feature!(:account_level_mastery_scales)
+      end
+
+      it "returns a OutcomeCalculationMethod default if no method exists" do
+        subaccount = @root_account.sub_accounts.create!
+        expect(@root_account.outcome_calculation_method).to eq nil
+        expect(subaccount.outcome_calculation_method).to eq nil
+        expect(@root_account.resolved_outcome_calculation_method).to eq OutcomeCalculationMethod.find_or_create_default!(@root_account)
+        expect(subaccount.resolved_outcome_calculation_method).to eq OutcomeCalculationMethod.find_or_create_default!(@root_account)
+      end
+    end
+
+    context "with the account_level_mastery_scales FF disabled" do
+      it "can be nil" do
+        root_account = Account.create!
+        root_account.disable_feature!(:account_level_mastery_scales)
+        subaccount = root_account.sub_accounts.create!
+        expect(root_account.resolved_outcome_calculation_method).to eq nil
+        expect(subaccount.resolved_outcome_calculation_method).to eq nil
+      end
+    end
   end
 
   it "should provide a list of courses" do
@@ -537,6 +641,7 @@ describe Account do
 
     limited_access = [ :read, :read_as_admin, :manage, :update, :delete, :read_outcomes, :read_terms ]
     conditional_access = RoleOverride.permissions.select { |_, v| v[:account_allows] }.map(&:first)
+    conditional_access += [:view_bounced_emails] # since this depends on :view_notifications
     disabled_by_default = RoleOverride.permissions.select { |_, v| v[:true_for].empty? }.map(&:first)
     full_access = RoleOverride.permissions.keys +
                   limited_access - disabled_by_default - conditional_access +
@@ -555,7 +660,6 @@ describe Account do
       admin_privileges += [:manage_privacy_settings] if k == :root
 
       user_privileges = limited_access + common_siteadmin_privileges
-
       expect(account.check_policy(hash[:site_admin][:admin]) - conditional_access).to match_array admin_privileges
       expect(account.check_policy(hash[:site_admin][:user]) - conditional_access).to match_array user_privileges
     end
@@ -689,6 +793,23 @@ describe Account do
     subs << great_grand_sub = Account.create!(name: 'great_grand_sub', parent_account: grand_sub)
     subs << Account.create!(name: 'great_great_grand_sub', parent_account: great_grand_sub)
     expect(Account.sub_account_ids_recursive(sub.id).sort).to eq(subs.map(&:id).sort)
+    expect(sub.sub_accounts_recursive(10, 0).sort_by(&:id)).to eq(subs.sort_by(&:id))
+  end
+
+  context "sharding" do
+    specs_require_sharding
+    it "returns sub account ids recursively when another shard is active" do
+      a = Account.default
+      subs = []
+      sub = Account.create!(name: 'sub', parent_account: a)
+      subs << grand_sub = Account.create!(name: 'grand_sub', parent_account: sub)
+      subs << great_grand_sub = Account.create!(name: 'great_grand_sub', parent_account: grand_sub)
+      subs << Account.create!(name: 'great_great_grand_sub', parent_account: great_grand_sub)
+      @shard1.activate do
+        expect(Account.sub_account_ids_recursive(sub.id).sort).to eq(subs.map(&:id).sort)
+        expect(sub.sub_accounts_recursive(10, 0).sort_by(&:id)).to eq(subs.sort_by(&:id))
+      end
+    end
   end
 
   it "should return the correct user count" do
@@ -958,23 +1079,16 @@ describe Account do
       end
     end
 
-    describe "decouple_rubrics feature flag" do
+    describe "rubrics permissions" do
       let(:tab_ids) { @account.tabs_available(@admin).pluck(:id) }
 
-      it "does not return the rubrics tab if manage_outcomes is false with the FF off" do
-        account_admin_user_with_role_changes(acccount: @account, role_changes: { manage_outcomes: false })
-        expect(tab_ids).not_to include(Account::TAB_RUBRICS)
-      end
-
-      it "returns rubrics tab if the FF is enabled/manage_outcomes is disabled" do
-        account_admin_user_with_role_changes(acccount: @account, role_changes: { manage_outcomes: false })
-        @account.root_account.enable_feature!(:decouple_rubrics)
+      it "returns the rubrics tab for admins by default" do
+        account_admin_user(acccount: @account)
         expect(tab_ids).to include(Account::TAB_RUBRICS)
       end
 
-      it "the rubrics tab is not shown if the FF is enabled but the user lacks permission (manage_rubrics)" do
+      it "the rubrics tab is not shown if the user lacks permission (manage_rubrics)" do
         account_admin_user_with_role_changes(acccount: @account, role_changes: { manage_rubrics: false })
-        @account.root_account.enable_feature!(:decouple_rubrics)
         expect(tab_ids).not_to include(Account::TAB_RUBRICS)
       end
     end
@@ -1266,7 +1380,7 @@ describe Account do
     end
 
     it "should include built-in roles when called" do
-      expect(@sub_account.available_course_roles.sort_by(&:id)).to eq ([ @roleA, @roleB, @roleC ] + Role.built_in_course_roles).sort_by(&:id)
+      expect(@sub_account.available_course_roles.sort_by(&:id)).to eq ([ @roleA, @roleB, @roleC ] + Role.built_in_course_roles(root_account_id: @account.id)).sort_by(&:id)
     end
   end
 
@@ -1321,15 +1435,25 @@ describe Account do
   end
 
   describe "#update_account_associations" do
+    before do
+      @account = Account.default.sub_accounts.create!
+      @c1 = @account.courses.create!
+      @c2 = @account.courses.create!
+      @account.course_account_associations.scope.delete_all
+    end
+
     it "should update associations for all courses" do
-      account = Account.default.sub_accounts.create!
-      c1 = account.courses.create!
-      c2 = account.courses.create!
-      account.course_account_associations.scope.delete_all
-      expect(account.associated_courses).to eq []
-      account.update_account_associations
-      account.reload
-      expect(account.associated_courses.sort_by(&:id)).to eq [c1, c2]
+      expect(@account.associated_courses).to eq []
+      @account.update_account_associations
+      @account.reload
+      expect(@account.associated_courses.sort_by(&:id)).to eq [@c1, @c2]
+    end
+
+    it "can update associations in batch" do
+      expect(@account.associated_courses).to eq []
+      Account.update_all_update_account_associations
+      @account.reload
+      expect(@account.associated_courses.sort_by(&:id)).to eq [@c1, @c2]
     end
   end
 
@@ -1393,6 +1517,13 @@ describe Account do
       account.lti_guid = '12345'
       account.ensure_defaults
       expect(account.lti_guid).to eq '12345'
+    end
+
+    it "removes carriage returns from the name" do
+      account = Account.new
+      account.name = "Hello\r\nWorld"
+      account.ensure_defaults
+      expect(account.name).to eq "Hello\nWorld"
     end
   end
 
@@ -1516,6 +1647,10 @@ describe Account do
   end
 
   context "inheritable settings" do
+    before do
+      @settings = [:restrict_student_future_view, :lock_all_announcements]
+    end
+
     before :each do
       account_model
       @sub1 = @account.sub_accounts.create!
@@ -1531,40 +1666,51 @@ describe Account do
     end
 
     it "should be able to lock values for sub-accounts" do
-      @sub1.settings[:restrict_student_future_view] = {:locked => true, :value => true}
-      @sub1.settings[:lock_all_announcements] = {:locked => true, :value => true}
+      @settings.each do |key|
+        @sub1.settings[key] = {:locked => true, :value => true}
+      end
       @sub1.save!
       # should ignore the subaccount's wishes
-      @sub2.settings[:restrict_student_future_view] = {:locked => true, :value => false}
-      @sub2.settings[:lock_all_announcements] = {:locked => true, :value => false}
+      @settings.each do |key|
+        @sub2.settings[key] = {:locked => true, :value => false}
+      end
       @sub2.save!
 
-      expect(@account.restrict_student_future_view).to eq({:locked => false, :value => false})
-      expect(@account.lock_all_announcements).to eq({:locked => false, :value => false})
+      @settings.each do |key|
+        expect(@account.send(key)).to eq({:locked => false, :value => false})
+      end
 
-      expect(@sub1.restrict_student_future_view).to eq({:locked => true, :value => true})
-      expect(@sub1.lock_all_announcements).to eq({:locked => true, :value => true})
+      @settings.each do |key|
+        expect(@sub1.send(key)).to eq({:locked => true, :value => true})
+      end
 
-      expect(@sub2.restrict_student_future_view).to eq({:locked => true, :value => true, :inherited => true})
-      expect(@sub2.lock_all_announcements).to eq({:locked => true, :value => true, :inherited => true})
+      @settings.each do |key|
+        expect(@sub2.send(key)).to eq({:locked => true, :value => true, :inherited => true})
+      end
     end
 
     it "should grandfather old pre-hash values in" do
-      @account.settings[:restrict_student_future_view] = true
-      @account.settings[:lock_all_announcements] = true
+      @settings.each do |key|
+        @account.settings[key] = true
+      end
       @account.save!
-      @sub2.settings[:restrict_student_future_view] = false
-      @sub2.settings[:lock_all_announcements] = false
+
+      @settings.each do |key|
+        @sub2.settings[key] = false
+      end
       @sub2.save!
 
-      expect(@account.restrict_student_future_view).to eq({:locked => false, :value => true})
-      expect(@account.lock_all_announcements).to eq({:locked => false, :value => true})
+      @settings.each do |key|
+        expect(@account.send(key)).to eq({:locked => false, :value => true})
+      end
 
-      expect(@sub1.restrict_student_future_view).to eq({:locked => false, :value => true, :inherited => true})
-      expect(@sub1.lock_all_announcements).to eq({:locked => false, :value => true, :inherited => true})
+      @settings.each do |key|
+        expect(@sub1.send(key)).to eq({:locked => false, :value => true, :inherited => true})
+      end
 
-      expect(@sub2.restrict_student_future_view).to eq({:locked => false, :value => false})
-      expect(@sub2.lock_all_announcements).to eq({:locked => false, :value => false})
+      @settings.each do |key|
+        expect(@sub2.send(key)).to eq({:locked => false, :value => false})
+      end
     end
 
     it "should translate string values in mass-assignment" do
@@ -1680,7 +1826,6 @@ describe Account do
       specs_require_sharding
 
       it "should work cross-shard" do
-        allow(ActiveRecord::Base.connection).to receive(:use_qualified_names?).and_return(true)
         @shard1.activate do
           @account = Account.create!
           @user = user_factory(:name => "silly name")
@@ -1763,13 +1908,12 @@ describe Account do
     end
 
     it "should add or overwrite all account users' dashboard_view preference" do
-      @account.enable_feature!(:student_planner)
       @account.default_dashboard_view = 'planner'
       @account.save!
       @account.reload
 
       expect([@user1.dashboard_view(@account), @user2.dashboard_view(@account)]).to match_array(['activity', 'cards'])
-      @account.update_user_dashboards_without_send_later
+      @account.update_user_dashboards(synchronous: true)
       @account.reload
       expect([@user1.reload.dashboard_view(@account), @user2.reload.dashboard_view(@account)]).to match_array(Array.new(2, 'planner'))
     end
@@ -1909,31 +2053,102 @@ describe Account do
     let(:subaccount) { Account.create!(root_account: root_account) }
 
     it "returns false if the account is not a root account" do
-      Account.site_admin.enable_feature!(:new_sis_integrations)
+      root_account.enable_feature!(:new_sis_integrations)
       root_account.enable_feature!(:disable_post_to_sis_when_grading_period_closed)
 
       expect(subaccount).not_to be_allow_disable_post_to_sis_when_grading_period_closed
     end
 
     context "for a root account" do
-      it "returns false if the site admin account does not enable new_sis_integrations" do
+      it "returns false if the root account does not enable the relevant feature flag" do
         root_account.enable_feature!(:disable_post_to_sis_when_grading_period_closed)
 
         expect(root_account).not_to be_allow_disable_post_to_sis_when_grading_period_closed
       end
 
-      it "returns false if this account does not enable the relevant feature flag" do
-        Account.site_admin.enable_feature!(:new_sis_integrations)
+      it "returns false if this account does not enable the new_sis_integrations feature flag" do
+        root_account.enable_feature!(:new_sis_integrations)
 
         expect(root_account).not_to be_allow_disable_post_to_sis_when_grading_period_closed
       end
 
       it "returns true when the relevant feature flags are enabled" do
-        Account.site_admin.enable_feature!(:new_sis_integrations)
+        root_account.enable_feature!(:new_sis_integrations)
         root_account.enable_feature!(:disable_post_to_sis_when_grading_period_closed)
 
         expect(root_account).to be_allow_disable_post_to_sis_when_grading_period_closed
       end
+    end
+  end
+
+  context "default_locale cached recursive search" do
+    specs_require_cache(:redis_cache_store)
+
+    it "should cache" do
+      sub_acc1 = Account.default.sub_accounts.create!(:default_locale => "es")
+      sub_acc2 = sub_acc1.sub_accounts.create!
+      expect(Account.recursive_default_locale_for_id(sub_acc2.id)).to eq "es"
+      Account.where(:id => sub_acc1).update_all(:default_locale => "de") # directly update db - shouldn't invalidate cache
+      expect(Account.recursive_default_locale_for_id(sub_acc2.id)).to eq "es"
+
+      sub_acc1.update_attribute(:default_locale, "en") # should invalidate cache downstream
+      expect(Account.recursive_default_locale_for_id(sub_acc2.id)).to eq "en"
+    end
+  end
+
+  context "effective_brand_config caching" do
+    specs_require_cache(:redis_cache_store)
+
+    it "should cache the brand config" do
+      @parent_account = Account.default
+      config1 = BrandConfig.create(variables: {"ic-brand-primary" => "#321"})
+      config2 = BrandConfig.create(variables: {"ic-brand-primary" => "#123"})
+      Account.default.update_attribute(:brand_config_md5, config1.md5)
+
+      sub_acc1 = Account.default.sub_accounts.create!
+      sub_acc2 = sub_acc1.sub_accounts.create!
+      expect(sub_acc2.effective_brand_config).to eq config1
+      Account.where(:id => sub_acc1).update_all(:brand_config_md5 => config2.md5) # directly update db - shouldn't invalidate cache
+      expect(Account.find(sub_acc2.id).effective_brand_config).to eq config1
+
+      Account.default.update_attribute(:brand_config_md5, config2.md5) # should invalidate downstream
+      expect(Account.find(sub_acc2.id).effective_brand_config).to eq config2
+    end
+  end
+
+  context '#roles_with_enabled_permission' do
+    let(:account) { account_model }
+
+    it 'returns expected roles with the given permission' do
+      role = account.roles.create :name => 'AssistantGrader'
+      role.base_role_type = 'TaEnrollment'
+      role.workflow_state = 'active'
+      role.save!
+      RoleOverride.create!(
+        context: account,
+        permission: 'change_course_state',
+        role: role,
+        enabled: true
+      )
+      expect(
+        account.roles_with_enabled_permission(:change_course_state).map(&:name).sort
+      ).to eq %w[AccountAdmin AssistantGrader DesignerEnrollment TeacherEnrollment]
+    end
+  end
+
+  describe '#invalidate_caches_if_changed' do
+    it 'works for root accounts' do
+      Account.default.name = 'Something new'
+      expect(Account).to receive(:invalidate_cache).with(Account.default.id).at_least(1)
+      Account.default.save!
+    end
+
+    it 'works for sub accounts' do
+      a = Account.default.manually_created_courses_account
+      a.name = 'something else'
+      expect(Rails.cache).to receive(:delete).with("short_name_lookup/account_#{a.id}").ordered
+      expect(Rails.cache).to receive(:delete).with(["account2", a.id].cache_key).ordered
+      a.save!
     end
   end
 end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # coding: utf-8
 #
 # Copyright (C) 2012 - present Instructure, Inc.
@@ -129,7 +131,7 @@ describe ContentMigration do
     it "should strip invalid utf8" do
       data = {
         'assessment_questions' => [{
-          'question_name' => "hai\xfbabcd"
+          'question_name' => +"hai\xfbabcd"
         }]
       }
       expect(ContentMigration.new.prepare_data(data)[:assessment_questions][0][:question_name]).to eq "haiabcd"
@@ -217,8 +219,20 @@ describe ContentMigration do
       test_zip_import(@course, cm)
     end
 
+    it "should go through instfs if enabled" do
+      cm = setup_zip_import(@course)
+      allow(InstFS).to receive(:enabled?).and_return(true)
+      @uuid = "1234-abcd"
+      allow(InstFS).to receive(:direct_upload).and_return(@uuid)
+
+      test_zip_import(@course, cm)
+      attachment = @course.attachments.last
+      expect(attachment.instfs_uuid).to eq(@uuid)
+    end
+
     it "should import into a user" do
       cm = setup_zip_import(@user)
+      expect(cm.root_account_id).to eq 0
       test_zip_import(@user, cm)
     end
 
@@ -775,6 +789,29 @@ describe ContentMigration do
         to receive(:new).and_return(importer)
       expect(importer).to receive(:import_content)
       @cm.import!({})
+    end
+  end
+
+  context "migration issues" do
+    it "doesn't overreeact to todo issues" do
+      err = StandardError.new("TestError")
+      expect{
+        @cm.add_todo("test todo", {exception: err})
+      }.to change{ ErrorReport.count }.by(0)
+    end
+
+    it "doesn't overreeact to warning issues" do
+      err = StandardError.new("TestError")
+      expect{
+        @cm.add_warning("test warn", {exception: err})
+      }.to change{ ErrorReport.count }.by(0)
+    end
+
+    it "reports error issues appropriately" do
+      err = StandardError.new("TestError")
+      expect{
+        @cm.add_error("test error", {exception: err})
+      }.to change{ ErrorReport.count }.by(1)
     end
   end
 end

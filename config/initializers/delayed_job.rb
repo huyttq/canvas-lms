@@ -128,6 +128,7 @@ Delayed::Pool.on_fork = ->{
 
 Delayed::Worker.lifecycle.around(:perform) do |worker, job, &block|
   Canvas::Reloader.reload! if Canvas::Reloader.pending_reload
+  Canvas::Redis.clear_idle_connections
 
   # context for our custom logger
   Thread.current[:context] = {
@@ -177,13 +178,51 @@ Delayed::Worker.lifecycle.before(:exceptional_exit) do |worker, exception|
   Canvas::Errors.capture(exception, info.to_h)
 end
 
-Delayed::Worker.lifecycle.before(:error) do |worker, job, exception|
+Delayed::Worker.lifecycle.before(:retry) do |worker, job, exception|
+  # any job that fails with a RetriableError gets routed
+  # here if it has any retries left.  We just want the stats
   info = Canvas::Errors::JobInfo.new(job, worker)
   begin
     (job.current_shard || Shard.default).activate do
-      Canvas::Errors.capture(exception, info.to_h)
+      Canvas::Errors.capture(exception, info.to_h, :info)
     end
-  rescue
-    Canvas::Errors.capture(exception, info.to_h)
+  rescue => e
+    Canvas::Errors.capture_exception(:jobs_lifecycle, e)
+    Canvas::Errors.capture(exception, info.to_h, :info)
   end
 end
+
+# Delayed::Backend::RecordNotFound happens when a job is queued and then the thing that
+# it's queued on gets deleted.  It happens all the time for stuff
+# like test students (we delete their stuff immediately), and
+# we don't need detailed exception reports for those.
+#
+# Delayed::RetriableError is thrown by any job to indicate the thing
+# that's failing is "kind of expected".  Upstream service backpressure,
+# etc.
+WARNABLE_DELAYED_EXCEPTIONS = [
+  Delayed::Backend::RecordNotFound,
+  Delayed::RetriableError,
+].freeze
+
+Delayed::Worker.lifecycle.before(:error) do |worker, job, exception|
+  is_warnable = WARNABLE_DELAYED_EXCEPTIONS.any?{|klass| exception.is_a?(klass) }
+  error_level = is_warnable ? :warn : :error
+  info = Canvas::Errors::JobInfo.new(job, worker)
+  begin
+    (job.current_shard || Shard.default).activate do
+      Canvas::Errors.capture(exception, info.to_h, error_level)
+    end
+  rescue
+    Canvas::Errors.capture(exception, info.to_h, error_level)
+  end
+end
+
+# syntactic sugar and compatibility shims
+module CanvasDelayedMessageSending
+  def delay_if_production(sender: nil, **kwargs)
+    sender ||= __calculate_sender_for_delay
+    delay(sender: sender, **kwargs.merge(synchronous: !Rails.env.production?))
+  end
+end
+Object.send(:include, CanvasDelayedMessageSending)

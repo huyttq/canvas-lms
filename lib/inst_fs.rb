@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #
 # Copyright (C) 2016 - present Instructure, Inc.
 #
@@ -48,7 +50,7 @@ module InstFS
       return unless user && enabled?
       CanvasHttp.delete(logout_url(user))
     rescue CanvasHttp::Error => e
-      Canvas::Errors.capture_exception(:page_view, e)
+      Canvas::Errors.capture_exception(:page_view, e, :warn)
     end
 
     def bearer_token(options)
@@ -61,6 +63,7 @@ module InstFS
     end
 
     def authenticated_url(attachment, options={})
+      options[:jti]= SecureRandom.uuid
       query_params = { token: access_jwt(access_path(attachment), options) }
       query_params[:download] = 1 if options[:download]
       access_url(attachment, query_params)
@@ -171,7 +174,13 @@ module InstFS
         raise InstFS::DirectUploadError, "upload succeeded, but response did not contain an \"instfs_uuid\" key"
       end
 
-      raise InstFS::DirectUploadError, "received code \"#{response.code}\" from service, with message \"#{response.body}\""
+      err_message = "received code \"#{response.code}\" from service, with message \"#{response.body}\""
+      if response.code.to_i >= 500
+        raise InstFS::ServiceError, err_message
+      elsif response.code.to_i == 400
+        raise InstFS::BadRequestError, err_message
+      end
+      raise InstFS::DirectUploadError, err_message
     end
 
     def export_reference(attachment)
@@ -255,10 +264,41 @@ module InstFS
 
     private
     def setting(key)
-      Canvas::DynamicSettings.find(service: "inst-fs", default_ttl: 5.minutes)[key]
+      unsafe_setting(key)
     rescue Imperium::TimeoutError => e
-      Canvas::Errors.capture_exception(:inst_fs, e)
-      nil
+      # capture this to make sure that we have SOME
+      # signal that the problem is continuing, even if our
+      # retries are all successful.
+      Canvas::Errors.capture_exception(:inst_fs, e, :warn)
+      Rails.logger.warn("[INST_FS] Consul timeout hit during settings #{e}, entering retry handling...")
+      retry_limit = Setting.get("inst_fs_config_retry_count", "5").to_i
+      retry_base = Setting.get("inst_fs_config_retry_base_interval", "1.4").to_i
+      retry_count = 1
+      return_value = nil
+      currently_in_job = Delayed::Worker.current_job.present?
+      while retry_count <= retry_limit
+        begin
+          return_value = unsafe_setting(key)
+          break
+        rescue Imperium::TimeoutError => e
+          retry_count += 1
+          # if we're not currently in a job, one retry is all you get,
+          # fail for the user and move on.
+          raise e if !currently_in_job || retry_count > retry_limit
+          backoff_interval = retry_base ** retry_count
+          Rails.logger.warn("[INST_FS] Consul timeout hit during settings, retrying in #{backoff_interval} seconds...")
+          sleep(backoff_interval)
+        end
+      end
+      return_value
+    end
+
+    # this is just to provide a convenient way to wrap
+    # accessing a setting in retries (see #setting),
+    # it should not be used by the rest of the code,
+    # inside this class or otherwise.
+    def unsafe_setting(key)
+      Canvas::DynamicSettings.find(service: "inst-fs", default_ttl: 5.minutes)[key]
     end
 
     def service_url(path, query_params=nil)
@@ -318,7 +358,6 @@ module InstFS
       whole, remainder = number.divmod(step)
       whole * step
     end
-
     # If we just say every token was created at Time.now, since that token
     # is included in the url, every time we make a url it will be a new url and no browser
     # will never be able to get it from their cache. Which means, for example: every time you
@@ -361,6 +400,9 @@ module InstFS
         resource: resource,
         host: options[:oauth_host]
       }
+      original_url = parse_original_url(options[:original_url])
+      claims[:original_url] = original_url if original_url.present?
+      claims[:jti] = options[:jti] if options.key? :jti
       if options[:acting_as] && options[:acting_as] != options[:user]
         claims[:acting_as_user_id] = options[:acting_as].global_id.to_s
       end
@@ -437,8 +479,25 @@ module InstFS
       }, expires_in)
     end
 
+    def parse_original_url(url)
+      if url
+        uri = Addressable::URI.parse(url)
+        query = (uri.query_values || {}).with_indifferent_access
+        # We only want to redirect once, if the redirect param is present then we already redirected.
+        # In which case we don't send the original_url param again
+        if !Canvas::Plugin.value_to_boolean(query[:redirect])
+          query[:redirect] = true
+          uri.query_values = query
+          return uri.to_s
+        else
+          return nil
+        end
+      end
+    end
+
     def amend_claims_for_access_token(claims, access_token, root_account)
       return unless access_token
+
       if whitelisted_access_token?(access_token)
         # temporary workaround for legacy API consumers
         claims[:legacy_api_developer_key_id] = access_token.global_developer_key_id.to_s
@@ -462,6 +521,8 @@ module InstFS
   end
 
   class DirectUploadError < StandardError; end
+  class ServiceError < DirectUploadError; end
+  class BadRequestError < DirectUploadError; end
   class ExportReferenceError < StandardError; end
   class DuplicationError < StandardError; end
   class DeletionError < StandardError; end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #
 # Copyright (C) 2017 - present Instructure, Inc.
 #
@@ -146,7 +148,7 @@ module BlueprintCourseCommon
       wait_for_ajaximations
 
       # confirm it's open
-      expect(details_wrapper).to contain_css('.bca-table__course-row')
+      expect(details_wrapper).to contain_css('[data-testid="bca-table__course-row"]')
     end
 
     def term_options
@@ -164,9 +166,9 @@ module BlueprintCourseCommon
 
     # return the <tr>s holding with the current list of available courses
     def available_courses
-      ff('.bca-table__content-wrapper tbody tr.bca-table__course-row')
+      ff('.bca-table__content-wrapper tbody tr[data-testid="bca-table__course-row"]')
     rescue
-      [] if f('.bca-table__no-results')
+      [] if f('tr[data-testid="bca-table__no-results"]')
     end
 
     # return the <tbody> holding the current associations

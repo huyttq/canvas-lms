@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #
 # Copyright (C) 2013 - present Instructure, Inc.
 #
@@ -124,4 +126,3 @@ module Api::V1::QuizSubmission
     submission_zip(quiz, latest_submission)
   end
 end
-

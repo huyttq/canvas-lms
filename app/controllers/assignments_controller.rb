@@ -40,7 +40,7 @@ class AssignmentsController < ApplicationController
   before_action :normalize_title_param, :only => [:new, :edit]
 
   def index
-    Shackles.activate(:slave) do
+    GuardRail.activate(:secondary) do
       return redirect_to(dashboard_url) if @context == @current_user
 
       if authorized_action(@context, @current_user, :read)
@@ -116,6 +116,7 @@ class AssignmentsController < ApplicationController
 
     js_env({
       ASSIGNMENT_ID: params[:id],
+      CONFETTI_ENABLED: @domain_root_account&.feature_enabled?(:confetti_for_assignments),
       COURSE_ID: @context.id,
       PREREQS: assignment_prereqs,
       SUBMISSION_ID: graphql_submisison_id
@@ -126,7 +127,10 @@ class AssignmentsController < ApplicationController
   end
 
   def show
-    Shackles.activate(:slave) do
+    if !request.format.html?
+      return render body: "endpoint does not support #{request.format.symbol}", status: :bad_request
+    end
+    GuardRail.activate(:secondary) do
       @is_ip_whitelisted = is_ip_whitelisted?
       @assignment ||= @context.assignments.find(params[:id])
 
@@ -150,7 +154,7 @@ class AssignmentsController < ApplicationController
         @unlocked = !@locked || @assignment.grants_right?(@current_user, session, :update)
 
         unless @assignment.new_record? || (@locked && !@locked[:can_view])
-          Shackles.activate(:master) do
+          GuardRail.activate(:primary) do
             @assignment.context_module_action(@current_user, :read)
           end
         end
@@ -162,8 +166,8 @@ class AssignmentsController < ApplicationController
             !@current_user_submission.graded? &&
             !@current_user_submission.submission_type
           if @current_user_submission
-            Shackles.activate(:master) do
-              @current_user_submission.send_later(:context_module_action)
+            GuardRail.activate(:primary) do
+              @current_user_submission.delay.context_module_action
             end
           end
         end
@@ -265,6 +269,7 @@ class AssignmentsController < ApplicationController
           ROOT_OUTCOME_GROUP: outcome_group_json(@context.root_outcome_group, @current_user, session),
           SIMILARITY_PLEDGE: @similarity_pledge,
           CONFETTI_ENABLED: @domain_root_account&.feature_enabled?(:confetti_for_assignments),
+          USER_ASSET_STRING: @current_user&.asset_string,
         })
 
         set_master_course_js_env_data(@assignment, @context)
@@ -281,7 +286,7 @@ class AssignmentsController < ApplicationController
         # this will set @user_has_google_drive
         user_has_google_drive
 
-        @can_direct_share = @context.root_account.feature_enabled?(:direct_share) && @assignment.grants_right?(@current_user, session, :update)
+        @can_direct_share = @context.root_account.feature_enabled?(:direct_share) && @context.grants_right?(@current_user, session, :read_as_admin)
         @assignment_menu_tools = external_tools_display_hashes(:assignment_menu)
 
         @mark_done = MarkDonePresenter.new(self, @context, params["module_item_id"], @current_user, @assignment)
@@ -293,6 +298,8 @@ class AssignmentsController < ApplicationController
           css_bundle :assignments
           js_bundle :assignment_show
         end
+
+        mastery_scales_js_env
 
         render locals: {
           eula_url: tool_eula_url,
@@ -343,10 +350,8 @@ class AssignmentsController < ApplicationController
       docs = {}
       begin
         docs = google_drive_connection.list_with_extension_filter(assignment.allowed_extensions)
-      rescue GoogleDrive::NoTokenError => e
-        Canvas::Errors.capture_exception(:oauth, e)
-      rescue Google::APIClient::AuthorizationError => e
-        Canvas::Errors.capture_exception(:oauth, e)
+      rescue GoogleDrive::NoTokenError, Google::APIClient::AuthorizationError => e
+        Canvas::Errors.capture_exception(:oauth, e, :warn)
       rescue ArgumentError => e
         Canvas::Errors.capture_exception(:oauth, e)
       rescue => e
@@ -465,8 +470,6 @@ class AssignmentsController < ApplicationController
 
       hash = {
         CONTEXT_ACTION_SOURCE: :syllabus,
-        # don't check for student enrollments because we want this to show for the teacher as well
-        STUDENT_PLANNER_ENABLED: @domain_root_account&.feature_enabled?(:student_planner)
       }
       append_sis_data(hash)
       js_env(hash)
@@ -514,7 +517,7 @@ class AssignmentsController < ApplicationController
 
     @assignment.quiz_lti! if params.key?(:quiz_lti)
 
-    @assignment.workflow_state ||= "unpublished"
+    @assignment.workflow_state = "unpublished"
     @assignment.updating_user = @current_user
     @assignment.content_being_saved_by(@current_user)
     @assignment.assignment_group = group if group

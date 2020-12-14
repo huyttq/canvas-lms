@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #
 # Copyright (C) 2013 - present Instructure, Inc.
 #
@@ -97,7 +99,7 @@ class DueDateCacher
       executing_user: executing_user
     }
 
-    recompute_course(assignment.context, opts)
+    recompute_course(assignment.context, **opts)
   end
 
   def self.recompute_course(course, assignments: nil, inst_jobs_opts: {}, run_immediately: false, update_grades: false, original_caller: caller(1..1).first, executing_user: nil)
@@ -114,7 +116,7 @@ class DueDateCacher
     if run_immediately
       due_date_cacher.recompute
     else
-      due_date_cacher.send_later_if_production_enqueue_args(:recompute, inst_jobs_opts)
+      due_date_cacher.delay_if_production(**inst_jobs_opts).recompute
     end
   end
 
@@ -137,7 +139,7 @@ class DueDateCacher
     if run_immediately
       due_date_cacher.recompute
     else
-      due_date_cacher.send_later_if_production_enqueue_args(:recompute, inst_jobs_opts)
+      due_date_cacher.delay_if_production(**inst_jobs_opts).recompute
     end
   end
 
@@ -322,7 +324,7 @@ class DueDateCacher
     @enrollment_counts ||= begin
       counts = EnrollmentCounts.new([], [], [])
 
-      Shackles.activate(:slave) do
+      GuardRail.activate(:secondary) do
         # The various workflow states below try to mimic similarly named scopes off of course
         scope = Enrollment.select(
           :user_id,

@@ -25,6 +25,7 @@ import $ from 'jquery'
 import numberHelper from 'jsx/shared/helpers/numberHelper'
 import round from '../../util/round'
 import RichContentEditor from 'jsx/shared/rce/RichContentEditor'
+import { showFlashAlert } from 'jsx/shared/FlashAlert'
 import EditViewTemplate from 'jst/assignments/EditView'
 import userSettings from '../../userSettings'
 import TurnitinSettings from '../../models/TurnitinSettings'
@@ -438,7 +439,18 @@ export default class EditView extends ValidatedFormView
       $("#mc_external_data_objectives").text(mc_ext.objectives)
       $("#mc_external_data_tracker").text(mc_ext.trackerName)
       $("#mc_external_data_tracker_alignment").text(mc_ext.trackerAlignment)
-      $("#mc_external_data_students").text(mc_ext.studentCount + " " + I18n.t('Students'))
+
+      student_count_text = I18n.t({
+        zero: '0 Students',
+        one: '1 Student',
+        other: '%{count} Students'
+      }, {count: mc_ext.studentCount})
+      $("#mc_external_data_students").text(student_count_text)
+
+      showFlashAlert({
+        message: I18n.t('Assignment details updated'),
+        type: 'info'
+      })
 
   handleOnlineSubmissionTypeChange: (env) =>
     showConfigTools = @$onlineSubmissionTypes.find(ALLOW_FILE_UPLOADS).attr('checked') ||

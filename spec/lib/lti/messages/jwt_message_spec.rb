@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #
 # Copyright (C) 2018 - present Instructure, Inc.
 #
@@ -39,8 +41,7 @@ describe Lti::Messages::JwtMessage do
     JSON::JWT.decode(jws[:id_token], pub_key)
   end
   let(:pub_key) do
-    jwk = JSON::JWK.new(Lti::KeyStorage.retrieve_keys['jwk-present.json'])
-    jwk.to_key.public_key
+    Lti::KeyStorage.present_key.to_key.public_key
   end
   let_once(:course) do
     course_with_student
@@ -493,10 +494,25 @@ describe Lti::Messages::JwtMessage do
   end
 
   describe 'include name claims' do
-
     before do
       course
       tool.update!(workflow_state: 'name_only')
+    end
+
+    context 'when the user is nil' do
+      let(:user) { nil }
+
+      it 'does not add the name' do
+        expect(decoded_jwt['name']).to be_blank
+      end
+
+      it 'does not add the given name' do
+        expect(decoded_jwt['given_name']).to be_blank
+      end
+
+      it 'does not add the family name' do
+        expect(decoded_jwt['family_name']).to be_blank
+      end
     end
 
     it 'adds the name' do
@@ -697,6 +713,18 @@ describe Lti::Messages::JwtMessage do
       before { tool.update!(workflow_state: 'name_only') }
 
       it_behaves_like 'skips role scope mentor'
+    end
+  end
+
+  describe 'legacy user id claims' do
+    subject { decoded_jwt['https://purl.imsglobal.org/spec/lti/claim/lti11_legacy_user_id'] }
+
+    it { is_expected.to eq tool.opaque_identifier_for(user) }
+
+    context 'when the user is blank' do
+      let(:user) { nil }
+
+      it { is_expected.to eq User.public_lti_id }
     end
   end
 end

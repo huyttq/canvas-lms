@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #
 # Copyright (C) 2011 - present Instructure, Inc.
 #
@@ -55,8 +57,6 @@ class ContentZipper
       end
     rescue => e
       Canvas::Errors.capture(e, message: "Content zipping failed")
-      @logger.debug(e.to_s)
-      @logger.debug(e.backtrace.join('\n'))
       attachment.update_attribute(:workflow_state, 'to_be_zipped')
     end
   end

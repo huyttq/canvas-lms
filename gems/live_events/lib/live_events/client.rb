@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #
 # Copyright (C) 2015 - present Instructure, Inc.
 #
@@ -53,6 +55,10 @@ module LiveEvents
       if plugin_config['aws_access_key_id'].present? && plugin_config['aws_secret_access_key_dec'].present?
         aws[:access_key_id] = plugin_config['aws_access_key_id']
         aws[:secret_access_key] = plugin_config['aws_secret_access_key_dec']
+      end
+
+      if plugin_config['custom_aws_credentials']
+        aws[:credentials] = LiveEvents.aws_credentials(plugin_config)
       end
 
       aws[:region] = plugin_config['aws_region'].presence || 'us-east-1'

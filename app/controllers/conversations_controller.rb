@@ -280,6 +280,11 @@ class ConversationsController < ApplicationController
       return redirect_to conversations_path(:scope => params[:redirect_scope]) if params[:redirect_scope]
       @current_user.reset_unread_conversations_counter
       @current_user.reload
+      if @domain_root_account.feature_enabled?(:react_inbox)
+        js_bundle :canvas_inbox
+        render html: '', layout: true
+        return
+      end
 
       hash = {
         :ATTACHMENTS_FOLDER_ID => @current_user.conversation_attachments_folder.id.to_s,
@@ -381,7 +386,7 @@ class ConversationsController < ApplicationController
 
       recipients_are_instructors = all_recipients_are_instructors?(context, @recipients)
 
-      if context.is_a?(Course) && !recipients_are_instructors && !context.grants_right?(@current_user, session, :send_messages)
+      if context.is_a?(Course) && !recipients_are_instructors && !observer_to_linked_students && !context.grants_right?(@current_user, session, :send_messages)
         return render_error("Unable to send messages to users in #{context.name}", '')
       elsif !valid_context?(context)
         return render_error('context_code', 'invalid')
@@ -415,6 +420,7 @@ class ConversationsController < ApplicationController
     shard.activate do
       if batch_private_messages || batch_group_messages
         mode = params[:mode] == 'async' ? :async : :sync
+        message.relativize_attachment_ids(from_shard: message.shard, to_shard: shard)
         message.shard = shard
         batch = ConversationBatch.generate(message, @recipients, mode,
           subject: params[:subject], context_type: context_type,
@@ -585,7 +591,7 @@ class ConversationsController < ApplicationController
 
     @conversation.update_attribute(:workflow_state, "read") if @conversation.unread? && auto_mark_as_read?
     messages = nil
-    Shackles.activate(:slave) do
+    GuardRail.activate(:secondary) do
       messages = @conversation.messages
       ActiveRecord::Associations::Preloader.new.preload(messages, :asset)
     end
@@ -926,9 +932,8 @@ class ConversationsController < ApplicationController
         message = @conversation.process_new_message(message_args, @recipients, message_ids, @tags)
         render :json => conversation_json(@conversation.reload, @current_user, session, :messages => [message])
       else
-        @conversation.send_later_enqueue_args(:process_new_message,
-          {:strand => "add_message_#{@conversation.global_conversation_id}", :max_attempts => 1},
-          message_args, @recipients, message_ids, @tags)
+        @conversation.delay(strand: "add_message_#{@conversation.global_conversation_id}").
+          process_new_message(message_args, @recipients, message_ids, @tags)
         return render :json => [], :status => :accepted
       end
     else
@@ -1027,7 +1032,7 @@ class ConversationsController < ApplicationController
       f.updated = Time.now
       f.id = conversations_url
     end
-    Shackles.activate(:slave) do
+    GuardRail.activate(:secondary) do
       @entries = []
       @conversation_contexts = {}
       @current_user.conversations.each do |conversation|
@@ -1254,5 +1259,16 @@ class ConversationsController < ApplicationController
     end
 
     false
+  end
+
+  def observer_to_linked_students
+    observee_ids = @current_user.enrollments.where(type: "ObserverEnrollment").distinct.pluck(:associated_user_id)
+    return false if observee_ids.empty?
+
+    @recipients.each do |recipient|
+      return false if observee_ids.exclude?(recipient.id)
+    end
+
+    true
   end
 end

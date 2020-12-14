@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #
 # Copyright (C) 2011 - present Instructure, Inc.
 #
@@ -353,11 +355,27 @@ module Api::V1::Assignment
     end
 
     if submission = opts[:submission]
+      should_show_statistics = opts[:include_score_statistics] && assignment.can_view_score_statistics?(user)
+
       if submission.is_a?(Array)
         ActiveRecord::Associations::Preloader.new.preload(submission, :quiz_submission) if assignment.quiz?
         hash['submission'] = submission.map { |s| submission_json(s, assignment, user, session, assignment.context, params) }
+        should_show_statistics = should_show_statistics && submission.any? do |s|
+          s.assignment = assignment # Avoid extra query in submission.hide_grade_from_student? to get assignment
+          s.eligible_for_showing_score_statistics?
+        end
       else
         hash['submission'] = submission_json(submission, assignment, user, session, assignment.context, params)
+        submission.assignment = assignment # Avoid extra query in submission.hide_grade_from_student? to get assignment
+        should_show_statistics = should_show_statistics && submission.eligible_for_showing_score_statistics?
+      end
+
+      if should_show_statistics && (stats = assignment&.score_statistic)
+        hash["score_statistics"] = {
+          'min' => stats.minimum.to_f.round(1),
+          'max': stats.maximum.to_f.round(1),
+          'mean': stats.mean.to_f.round(1)
+        }
       end
     end
 
@@ -380,14 +398,18 @@ module Api::V1::Assignment
       hash['planner_override'] = planner_override_json(override, user, session)
     end
 
-    if assignment.course.post_policies_enabled?
-      hash['post_manually'] = assignment.post_manually?
-    end
-
+    hash['post_manually'] = assignment.post_manually?
     hash['anonymous_grading'] = value_to_boolean(assignment.anonymous_grading)
     hash['anonymize_students'] = assignment.anonymize_students?
 
     hash['require_lockdown_browser'] = assignment.settings&.dig('lockdown_browser', 'require_lockdown_browser') || false
+
+    if opts[:include_can_submit] && !assignment.quiz? && !submission.is_a?(Array)
+      hash['can_submit'] = assignment.expects_submission? &&
+          assignment.rights_status(user, :submit)[:submit] &&
+          (submission.nil? || submission.attempts_left.nil? || submission.attempts_left > 0)
+    end
+
     hash
   end
 
@@ -496,9 +518,6 @@ module Api::V1::Assignment
     DueDateCacher.recompute(prepared_create[:assignment], update_grades: calc_grades, executing_user: user)
     response
   rescue ActiveRecord::RecordInvalid
-    false
-  rescue Lti::AssignmentSubscriptionsHelper::AssignmentSubscriptionError => e
-    assignment.errors.add('plagiarism_tool_subscription', e)
     false
   end
 
@@ -961,7 +980,7 @@ module Api::V1::Assignment
       assignment.tool_settings_tool = tool
     elsif assignment.persisted? && clear_tool_settings_tools?(assignment, assignment_params)
       # Destroy subscriptions and tool associations
-      assignment.send_later_if_production(:clear_tool_settings_tools)
+      assignment.delay_if_production.clear_tool_settings_tools
     end
   end
 

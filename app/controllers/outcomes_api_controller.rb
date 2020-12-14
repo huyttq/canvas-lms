@@ -174,7 +174,7 @@ class OutcomesApiController < ApplicationController
   #
   def show
     if authorized_action(@outcome, @current_user, :read)
-      render :json => outcome_json(@outcome, @current_user, session)
+      render :json => outcome_json(@outcome, @current_user, session, {context: @context})
     end
   end
 
@@ -268,7 +268,7 @@ class OutcomesApiController < ApplicationController
 
     update_outcome_criterion(@outcome) if params[:mastery_points] || params[:ratings]
     if @outcome.update(params.permit(*DIRECT_PARAMS))
-      render :json => outcome_json(@outcome, @current_user, session)
+      render :json => outcome_json(@outcome, @current_user, session, {context: @context})
     else
       render :json => @outcome.errors, :status => :bad_request
     end
@@ -300,7 +300,7 @@ class OutcomesApiController < ApplicationController
         joins("INNER JOIN #{Assignment.quoted_table_name} assignments ON assignments.id = content_tags.content_id AND content_tags.content_type = 'Assignment'").
         joins("INNER JOIN #{Submission.quoted_table_name} submissions ON submissions.assignment_id = assignments.id AND submissions.user_id = #{student_id} AND submissions.workflow_state <> 'deleted'").
         where('assignments.workflow_state NOT IN (?)', assignment_states).
-        to_sql).to_hash
+        to_sql).to_a
       alignments.each{|a| a[:url] = "#{polymorphic_url([course, :assignments])}/#{a['assignment_id']}"}
 
       quizzes = Quizzes::Quiz.active
