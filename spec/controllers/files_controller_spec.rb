@@ -1518,6 +1518,14 @@ describe FilesController do
   end
 
   describe "GET 'image_thumbnail'" do
+    it "should return default 'no_pic' thumbnail if attachment not found" do
+      user_session @teacher
+      get "image_thumbnail", params: { uuid: "bad uuid", id: "bad id" }
+      expect(response).to be_redirect
+    end
+  end
+
+  describe "GET 'image_thumbnail'" do
     let(:image) {factory_with_protected_attributes(@teacher.attachments, uploaded_data: stub_png_data, instfs_uuid: "1234")}
 
     it "should return default 'no_pic' thumbnail if attachment not found" do

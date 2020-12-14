@@ -169,4 +169,9 @@ module RCSSidebarPage
     close_button.click
     wait_for_ajaximations
   end
+
+  def click_close_button
+    close_button.click
+    wait_for_ajaximations
+  end
 end

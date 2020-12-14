@@ -1184,6 +1184,20 @@ describe DiscussionTopic do
       expect(@student.stream_item_instances.count).to eq 0
     end
 
+    it "should remove stream items from users if locked by a module" do
+      topic = @course.discussion_topics.create!(title: "Ya Ya Ding Dong", user: @teacher, message: 'By Will Ferrell and My Marianne')
+
+      expect(@student.stream_item_instances.count).to eq 1
+
+      context_module = @course.context_modules.create!(name: 'some module')
+      context_module.unlock_at = Time.now + 1.day
+      context_module.add_item(type: 'discussion_topic', id: topic.id)
+      context_module.save!
+      topic.save!
+
+      expect(@student.stream_item_instances.count).to eq 0
+    end
+
     it "should not attempt to clear stream items if a discussion topic was not section specific before last save" do
       topic = @course.discussion_topics.create!(title: "Ben Loves Panda", user: @teacher)
       expect(topic.stream_item).to receive(:stream_item_instances).never

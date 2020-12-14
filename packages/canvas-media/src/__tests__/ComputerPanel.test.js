@@ -143,6 +143,16 @@ describe('UploadMedia: ComputerPanel', () => {
       const aFile = new File(['foo'], 'foo.avi', {
         type: 'video/avi'
       })
+      const {getByTestId} = renderPanel({theFile: aFile, hasUploadedFile: true})
+      const icon = await waitForElement(() => getByTestId('preview-video-icon'))
+      expect(icon).toBeInTheDocument()
+    })
+
+    it('Renders a video icon if afile type is a video/avi', async () => {
+      // because avi videos won't load in the player via a blob url
+      const aFile = new File(['foo'], 'foo.avi', {
+        type: 'video/avi'
+      })
       const {getByTestId, getByText} = renderPanel({theFile: aFile, hasUploadedFile: true})
       const icon = await waitFor(() => getByTestId('preview-video-icon'))
       expect(icon).toBeInTheDocument()

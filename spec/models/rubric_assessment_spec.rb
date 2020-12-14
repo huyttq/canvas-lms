@@ -34,6 +34,8 @@ describe RubricAssessment do
     @association = @rubric.associate_with(@assignment, @course, :purpose => 'grading', :use_for_grading => true)
   end
 
+  it { is_expected.to have_many(:learning_outcome_results).dependent(:destroy) }
+
   describe "active_rubric_association?" do
     before(:once) do
       @assessment = @association.assess({

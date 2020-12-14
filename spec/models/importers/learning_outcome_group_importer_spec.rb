@@ -123,3 +123,5 @@ describe "Importing Learning Outcome Groups" do
     expect(@context.learning_outcome_groups.count).to eq 4
   end
 end
+
+      log_data[:title] = "Stuff 2"

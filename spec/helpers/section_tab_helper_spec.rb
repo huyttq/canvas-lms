@@ -258,6 +258,19 @@ describe SectionTabHelper do
             tab_assignments.merge(), course
           ).a_tag
         end
+        let(:html) { Nokogiri::HTML.fragment(string).children[0] }
+
+        it 'shouldn\'t have a title attribute' do
+          expect(html.attributes).not_to include('title')
+        end
+      end
+
+      context 'when tab is neither hidden nor unused' do
+        let(:string) do
+          SectionTabHelperSpec::SectionTabTag.new(
+            tab_assignments.merge(), course
+          ).a_tag
+        end
         let(:html) { Nokogiri::HTML5.fragment(string).children[0] }
 
         it 'shouldn\'t have a title attribute' do

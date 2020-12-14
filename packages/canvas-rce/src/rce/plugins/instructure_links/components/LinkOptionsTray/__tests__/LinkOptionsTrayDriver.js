@@ -67,6 +67,14 @@ export default class LinkOptionsTrayDriver {
     )
   }
 
+  get doneButtonIsDisabled() {
+    return this.$doneButton.getAttribute('disabled') !== null
+  }
+
+  get $errorMessage() {
+    return queryByTestId(this.$element, 'url-error')
+  }
+
   get $previewOptionOverlayRadioInput() {
     // valid only for rce_better_file_previewing on
     return queryHelpers.queryByAttribute('value', this.$element, 'overlay')

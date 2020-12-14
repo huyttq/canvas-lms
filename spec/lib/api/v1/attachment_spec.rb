@@ -57,6 +57,16 @@ describe Api::V1::Attachment do
       json = attachment_json(a, teacher, {}, {})
       expect(json.fetch('thumbnail_url')).to eq json.fetch('url')
     end
+
+    it "should link an svg's thumbnail to itself" do
+      a =
+        attachment_model(
+          uploaded_data: stub_file_data('file.svg', '<svg></svg>', 'image/svg+xml'),
+          content_type: 'image/svg+xml'
+        )
+      json = attachment_json(a, teacher, {}, {})
+      expect(json.fetch('thumbnail_url')).to eq json.fetch('url')
+    end
   end
 
   describe '#infer_upload_filename' do

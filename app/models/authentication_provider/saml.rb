@@ -121,6 +121,16 @@ class AuthenticationProvider::SAML < AuthenticationProvider::Delegated
     true
   end
 
+  def destroy
+    super
+    if account.settings[:saml_entity_id] &&
+      !account.authentication_providers.active.where(auth_type: 'saml').exists?
+      account.settings.delete(:saml_entity_id)
+      account.save!
+    end
+    true
+  end
+
   def auth_provider_filter
     [nil, self]
   end

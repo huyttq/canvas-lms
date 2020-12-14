@@ -18,6 +18,7 @@ module LtiAdvantage::Messages
       nonce
       version
       target_link_uri
+      lti11_legacy_user_id
     ].freeze
 
     OPTIONAL_CLAIMS = %i[

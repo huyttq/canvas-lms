@@ -50,6 +50,7 @@ class Mutations::SetOverrideScore < Mutations::BaseMutation
 
     current_enrollments.each do |enrollment|
       verify_authorized_action!(enrollment.course, :manage_grades)
+      old_grade = score.override_grade
 
       # Only record a grade change for the enrollment matching the requested one
       score = enrollment.update_override_score(
@@ -60,6 +61,15 @@ class Mutations::SetOverrideScore < Mutations::BaseMutation
       )
 
       next unless enrollment == requested_enrollment
+
+      # Only send a grade change event once even if there are multiple enrollments
+      override_grade_change = Auditors::GradeChange::OverrideGradeChange.new(
+        grader: current_user,
+        old_grade: old_grade,
+        old_score: old_score,
+        score: score
+      )
+      Auditors::GradeChange.record(override_grade_change: override_grade_change)
 
       return_value = if score.valid?
         {grades: score}

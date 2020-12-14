@@ -19,6 +19,9 @@
 
 require File.expand_path(File.dirname(__FILE__) + '/common')
 
+# We have the funky indenting here because we will remove this once the granular
+# permission stuff is released, and I don't want to complicate the git history
+RSpec.shared_examples "course_sections" do
 describe "course sections" do
   include_context "in-process server selenium tests"
 
@@ -33,6 +36,7 @@ describe "course sections" do
 
   before(:each) do
     course_with_teacher_logged_in
+    set_granular_permission
     @section = @course.default_section
   end
 
@@ -140,5 +144,18 @@ describe "course sections" do
       f("a[data-student_id='#{@student.id}']").click
       expect(f(".StudentContextTray-Header__Name h2 a")).to include_text("User")
     end
+  end
+end
+end # End shared_example block
+
+RSpec.describe 'With granular permission on' do
+  it_behaves_like "course_sections" do
+    let(:set_granular_permission) { @course.root_account.enable_feature!(:granular_permissions_course_sections) }
+  end
+end
+
+RSpec.describe 'With granular permission off' do
+  it_behaves_like "course_sections" do
+    let(:set_granular_permission) { @course.root_account.disable_feature!(:granular_permissions_course_sections) }
   end
 end

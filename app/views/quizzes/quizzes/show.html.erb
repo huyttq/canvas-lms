@@ -261,6 +261,23 @@
     </div>
   </div>
 
+  <% elsif can_do(@context, @current_user, :read_as_admin) && @context.root_account.feature_enabled?(:direct_share) %>
+  <div class="header-bar">
+    <div class="header-bar-right">
+        <div class="header-group-right">
+          <div class="inline-block">
+            <button class=" al-trigger btn"  aria-haspopup="true" aria-owns="toolbar-1">
+              <i class="icon-more" aria-hidden="true"></i>
+              <span class="screenreader-only"><%= admin_manage_title %></span>
+            </button>
+            <ul id="toolbar-1" class="al-options" role="menu" tabindex="0" aria-hidden="true" aria-expanded="false">
+              <%= render :partial => 'direct_share_buttons' %>
+            </ul>
+          </div>
+        </div>
+    </div>
+  </div>
+
   <% elsif can_do(@context, @current_user, :read_as_admin) %>
   <div class="header-bar">
     <div class="header-bar-right">

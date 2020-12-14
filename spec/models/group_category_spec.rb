@@ -488,6 +488,32 @@ describe GroupCategory do
       # divides into 3 groups
       expect(@category.create_group_count).to eq 3
     end
+  end
+
+  context "#calculate_group_count_by_membership" do
+    before(:once) do
+      @category = @course.group_categories.create(:name => "Group Category")
+    end
+
+    it "calculates correctly for a clean split" do
+      # 10 "users"
+      allow(@category).to receive(:unassigned_users) {['u','u','u','u','u','u','u','u','u','u']}
+      # groups of 5 students
+      @category.create_group_member_count = 5
+      @category.calculate_group_count_by_membership
+      # divides into 2 groups
+      expect(@category.create_group_count).to eq 2
+    end
+
+    it "rounds up for an uneven split" do
+      # 11 "users"
+      allow(@category).to receive(:unassigned_users) {['u','u','u','u','u','u','u','u','u','u','u']}
+      # groups of 5 students
+      @category.create_group_member_count = 5
+      @category.calculate_group_count_by_membership
+      # divides into 3 groups
+      expect(@category.create_group_count).to eq 3
+    end
 
     it 'calculates correctly for same section groups' do
       section1 = @course.course_sections.create!(name: 'one')

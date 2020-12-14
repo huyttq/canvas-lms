@@ -374,6 +374,86 @@ describe "Outcomes API", type: :request do
           end
 
           describe "with no context provided" do
+            it "should return the outcome mastery scale and calculation method" do
+              raw_api_call(
+                :get,
+                "/api/v1/outcomes/#{@outcome.id}",
+                :controller => 'outcomes_api',
+                :action => 'show',
+                :id => @outcome.id.to_s,
+                :format => 'json'
+              )
+              json = controller.outcome_json(@outcome, @account_user.user, session, {context: @account})
+              expect(json).to eq(outcome_json(@outcome))
+            end
+          end
+        end
+
+        describe "disabled" do
+          it "should ignore the outcome_proficiency and calculation_method values if one exists" do
+            outcome_calculation_method_model(@account)
+            outcome_proficiency_model(@account)
+            json = api_call(:get, "/api/v1/outcomes/#{@outcome.id}",
+                            :controller => 'outcomes_api',
+                            :action => 'show',
+                            :id => @outcome.id.to_s,
+                            :format => 'json')
+            expect(json).to eq(outcome_json(@outcome))
+          end
+        end
+      end
+
+      describe "with the account_level_mastery_scales FF" do
+        describe "enabled" do
+          before :once do
+            @account.enable_feature!(:account_level_mastery_scales)
+          end
+
+          describe "within the account context" do
+            it "should return the account's mastery scale and calculation_method" do
+              proficiency = outcome_proficiency_model(@account)
+              method = outcome_calculation_method_model(@account)
+              raw_api_call(
+                :get,
+                "/api/v1/outcomes/#{@outcome.id}",
+                :controller => 'outcomes_api',
+                :action => 'show',
+                :id => @outcome.id.to_s,
+                :format => 'json'
+              )
+              json = controller.outcome_json(@outcome, @account_user.user, session, {context: @account})
+              expect(json).to eq(outcome_json(@outcome, {
+                :points_possible => proficiency.points_possible,
+                :mastery_points => proficiency.mastery_points,
+                :ratings => proficiency.ratings_hash.map(&:stringify_keys),
+                :calculation_method => method.calculation_method,
+                :calculation_int => method.calculation_int,
+              }))
+            end
+
+            it "should return the default outcome_proficiency and calculation_method if neither exists" do
+              raw_api_call(
+                :get,
+                "/api/v1/outcomes/#{@outcome.id}",
+                :controller => 'outcomes_api',
+                :action => 'show',
+                :id => @outcome.id.to_s,
+                :format => 'json'
+              )
+              json = controller.outcome_json(@outcome, @account_user.user, session, {context: @account})
+              proficiency = OutcomeProficiency.find_or_create_default!(@account)
+              method = OutcomeCalculationMethod.find_or_create_default!(@account)
+              expect(json).to eq(outcome_json(@outcome, {
+                :points_possible => proficiency.points_possible,
+                :mastery_points => proficiency.mastery_points,
+                :ratings => proficiency.ratings_hash.map(&:stringify_keys),
+                :calculation_method => method.calculation_method,
+                :calculation_int => method.calculation_int,
+              }))
+            end
+          end
+
+          describe "with no context provided" do
             it "should not return mastery scale data" do
               raw_api_call(
                 :get,

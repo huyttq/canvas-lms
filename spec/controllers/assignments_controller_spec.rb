@@ -1123,6 +1123,16 @@ describe AssignmentsController do
         end
       end
 
+      describe "mastery_scales" do
+        it "should set mastery_scales env when account has mastery scales enabled" do
+          @course.root_account.enable_feature!(:account_level_mastery_scales)
+          outcome_proficiency_model(@course)
+          get :show, params: {course_id: @course.id, id: @assignment.id}
+          expect(assigns[:js_env]).to have_key :ACCOUNT_LEVEL_MASTERY_SCALES
+          expect(assigns[:js_env]).to have_key :MASTERY_SCALE
+        end
+      end
+
       context "when viewing as a student with the assignments_2_student flag enabled" do
         let(:course) { @course }
         let(:assignment) { @assignment }

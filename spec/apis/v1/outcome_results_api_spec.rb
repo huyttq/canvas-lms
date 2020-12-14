@@ -316,6 +316,38 @@ describe "Outcome Results API", type: :request do
           end
         end
 
+        context 'when Account-level Mastery Scales flag is on' do
+          before do
+            @course.account.enable_feature!(:account_level_mastery_scales)
+          end
+
+          it 'uses default outcome_proficiency values for points scaling if no outcome proficiency exists' do
+            outcome_result
+            user_session @user
+
+            get "/courses/#{@course.id}/outcome_rollups.csv"
+            outcome_proficiency = OutcomeProficiency.find_or_create_default!(@course)
+            expect(response).to be_successful
+            expect(response.body).to eq <<~END
+              Student name,Student ID,new outcome result,new outcome mastery points
+              User,#{outcome_student.id},#{outcome_proficiency.points_possible},#{outcome_proficiency.mastery_points}
+              END
+          end
+
+          it 'uses resolved_outcome_proficiency for points scaling if one exists' do
+            proficiency = outcome_proficiency_model(@course)
+            outcome_result
+            user_session @user
+
+            get "/courses/#{@course.id}/outcome_rollups.csv"
+            expect(response).to be_successful
+            expect(response.body).to eq <<~END
+              Student name,Student ID,new outcome result,new outcome mastery points
+              User,#{outcome_student.id},10.0,10.0
+            END
+          end
+        end
+
         # rubocop:disable RSpec/NestedGroups
         context 'Student filters in LMGB FF' do
           before do

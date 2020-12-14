@@ -79,6 +79,51 @@ RSpec.describe Lti::Result, type: :model do
       before { result.submission.update!(grader_id: tool_id * -1) }
 
       context 'when the score_given has not been manually changed' do
+        it { is_expected.to eq result.result_score }
+      end
+
+      context 'when result_score is blank' do
+        before { result.update!(result_score: 0) }
+
+        it { is_expected.to eq result.result_score }
+      end
+
+      context 'when the submission is blank' do
+        before { result.update!(submission: nil) }
+
+        it { is_expected.to eq result.result_score }
+      end
+
+      context 'when the score_given was manually updated by a user' do
+        before { result.submission.update!(grader_id: 2, score: 4) }
+
+        it { is_expected.to eq 0.1 }
+
+        context 'when the assignment has 0 points_possible' do
+          before { assignment.update!(points_possible: 0) }
+
+          it { is_expected.to eq result.result_score }
+        end
+      end
+    end
+
+    describe '#scaled_result_score' do
+      subject { result.scaled_result_score }
+
+      let(:tool_id) { 1 }
+      let(:manual_grader_id) { 2 }
+
+      let(:result) do
+        lti_result_model(
+          assignment: assignment,
+          result_maximum: 1,
+          result_score: 0.5,
+        )
+      end
+
+      before { result.submission.update!(grader_id: tool_id * -1) }
+
+      context 'when the score_given has not been manually changed' do
         it { is_expected.to eq result.read_attribute(:result_score) }
       end
 

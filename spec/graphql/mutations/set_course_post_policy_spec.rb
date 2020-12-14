@@ -84,6 +84,8 @@ describe Mutations::SetCoursePostPolicy do
       expect(result.dig("data", "setCoursePostPolicy", "postPolicy", "_id").to_i).to be policy.id
     end
 
+      skip "DEMO-23 (8/17/20)"
+
     describe "updating the post policy of assignments in the course" do
       let(:policy) { PostPolicy.create!(course: course, post_manually: false) }
       let(:post_manually_mutation) { mutation_str(course_id: course.id, post_manually: true) }

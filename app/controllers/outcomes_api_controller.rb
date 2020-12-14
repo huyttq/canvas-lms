@@ -176,7 +176,7 @@ class OutcomesApiController < ApplicationController
   #
   def show
     if authorized_action(@outcome, @current_user, :read)
-      render :json => outcome_json(@outcome, @current_user, session)
+      render :json => outcome_json(@outcome, @current_user, session, {context: @context})
     end
   end
 
@@ -285,7 +285,7 @@ class OutcomesApiController < ApplicationController
 
     update_outcome_criterion(@outcome) if params[:mastery_points] || params[:ratings]
     if @outcome.update(params.permit(*DIRECT_PARAMS))
-      render :json => outcome_json(@outcome, @current_user, session)
+      render :json => outcome_json(@outcome, @current_user, session, {context: @context})
     else
       render :json => @outcome.errors, :status => :bad_request
     end
