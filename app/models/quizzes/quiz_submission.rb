@@ -166,7 +166,7 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
     raise "Cannot view temporary data for completed quiz" if graded?
     res = (self.submission_data || {}).with_indifferent_access
     logger.debug "----------RESULT before mod: #{res.inspect}"
-    
+
     begin
       unless self.submitted_attempts.nil? && self.submitted_attempts.last.nil?
         currentNumOfAttempts = self.submitted_attempts.count + 1
@@ -177,7 +177,7 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
         lastAttempt = self.submitted_attempts.last
         quizData = lastAttempt.quiz_data
 
-        last_submission = self.submitted_attempts.last.submission_data
+        last_submission = lastAttempt.submission_data
         last_submission.each { |tmp|
           #tmp {:correct=>true, :points=>1.0, :question_id=>13, :text=>"", :answer_for_question1=>2703, :answer_id_for_question1=>2703, :answer_for_question2=>3305, :answer_id_for_question2=>3305}
           # multiple choice question use symbol not string
@@ -192,7 +192,7 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
 
           if (isCorrect)
             res[qid + '_locked'] = "true" # hide it from user so he/she cannot update correct answers
-  
+
             if questionDef["question_type"] == 'multiple_dropdowns_question'
               question_guids = questionDef["question_text"].scan /#{qid}_\S{32}/
               multiple_answer_keys = sd.keys.select {|i| i.start_with? 'answer_id_for_'}
@@ -202,7 +202,7 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
               # {"correct"=>true, "points"=>1.0, "question_id"=>12, "text"=>"", "answer_208"=>"1", "answer_4976"=>"0", "answer_4019"=>"1", "answer_8312"=>"0"}
               multiple_answer_keys = sd.keys.select {|i| i.start_with? 'answer_'}
               multiple_answer_keys.each {|k| res[qid + '_' + k] = sd[k].to_i}
-              
+
             elsif questionDef["question_type"] == 'file_upload_question'
               res[qid] = sd['attachment_ids']
             else
@@ -217,7 +217,7 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
 
               question_guids = questionDef["question_text"].scan /#{qid}_\S{32}/
               multiple_answer_keys = sd.keys.select {|i| i.start_with? 'answer_id_for_'}
-              question_guids.each_with_index { |guid, index| 
+              question_guids.each_with_index { |guid, index|
                 answerId = sd[multiple_answer_keys[index]]
                 answer = answers.find {|q| q["id"] == answerId}
 
@@ -226,15 +226,17 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
                   res["#{guid}_locked"] = "true" # hide it from user so he/she cannot update correct answers
                 end
               }
+            elsif questionDef["question_type"] == 'essay_question'
+              res[qid] = sd["text"]
             end
           end
         }
-      end 
+      end
     rescue => e
       logger.error "cannot generate temporary data #{e.inspect}"
     end
     logger.debug "#############################RESULT AFTER mod: #{res.inspect}"
-    
+
     return res
   end
 
