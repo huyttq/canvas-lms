@@ -221,7 +221,7 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
                 answerId = sd[multiple_answer_keys[index]]
                 answer = answers.find {|q| q["id"] == answerId}
 
-                if res[guid].nil? #IMPORTANT: do not override auto-save user answers
+                if answer["weight"] == 100.0 && res[guid].nil? #IMPORTANT: do not override auto-save user answers
                   res[guid] = answerId
                 end
               }
