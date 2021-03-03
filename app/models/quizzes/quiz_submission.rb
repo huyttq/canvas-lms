@@ -221,13 +221,10 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
                 answerId = sd[multiple_answer_keys[index]]
                 answer = answers.find {|q| q["id"] == answerId}
 
-                if answer["weight"] == 100.0
+                if res[guid].nil? #IMPORTANT: do not override auto-save user answers
                   res[guid] = answerId
-                  res["#{guid}_locked"] = "true" # hide it from user so he/she cannot update correct answers
                 end
               }
-            elsif questionDef["question_type"] == 'essay_question'
-              res[qid] = sd["text"]
             end
           end
         }
