@@ -37,6 +37,14 @@ module Canvas
       end
   end
 
+  def self.whitelist_roles
+    @whitelist_roles ||= begin
+        res = config && config['whitelist_roles']
+        raise('whitelist_roles required, see config/security.yml') unless res
+        res
+      end
+  end
+
     class << self
       def method_missing(m, *args, &block)
         CanvasSecurity.send(m, *args, &block)
