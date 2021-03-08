@@ -126,7 +126,7 @@ class SubmissionsController < SubmissionsBaseController
     return render_unauthorized_action if @assignment.anonymous_peer_reviews? && @submission.peer_reviewer?(@current_user)
 
     @google_analytics_page_title = "#{@assignment.title} Submission Details"
-    @can_not_submit = !is_ip_whitelisted?
+    @can_not_submit = !has_submission_exemption?
     super
   end
 

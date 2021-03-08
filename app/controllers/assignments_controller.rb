@@ -131,7 +131,7 @@ class AssignmentsController < ApplicationController
       return render body: "endpoint does not support #{request.format.symbol}", status: :bad_request
     end
     GuardRail.activate(:secondary) do
-      @is_ip_whitelisted = is_ip_whitelisted?
+      @has_submission_exemption = has_submission_exemption?
       @assignment ||= @context.assignments.find(params[:id])
 
       if @assignment.deleted?

@@ -2787,11 +2787,17 @@ class ApplicationController < ActionController::Base
     Canvas::Security.whitelist_roles.include? @context_membership.role.name.downcase
   end
 
+  def has_submission_exemption?
+    return if ::Rails.env.development? || ::Rails.env.test?
+
+    is_ip_whitelisted? || is_role_whitelisted?
+  end
+
   def check_permission_exemption
     return if ::Rails.env.development? || ::Rails.env.test?
 
     msg = "You need to be in our office in order to submit"
-    unless is_ip_whitelisted? || is_role_whitelisted?
+    unless has_submission_exemption?
       respond_to do |format|
         format.html {
           flash[:error] = t('errors.can_not_submit_assignment', msg)
