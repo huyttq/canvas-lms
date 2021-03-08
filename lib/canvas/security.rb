@@ -57,6 +57,14 @@ module Canvas::Security
       end
   end
 
+  def self.whitelist_roles
+    @whitelist_roles ||= begin
+        res = config && config['whitelist_roles']
+        raise('whitelist_roles required, see config/security.yml') unless res
+        res
+      end
+  end
+
   def self.config
     @config ||= begin
       path = Rails.root + 'config/security.yml'

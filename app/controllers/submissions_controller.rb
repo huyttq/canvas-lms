@@ -91,7 +91,7 @@ class SubmissionsController < SubmissionsBaseController
   include Api::V1::Submission
 
   before_action :get_course_from_section, :only => :create
-  before_action :check_whitelist_ips, :only => :create
+  before_action :check_permission_exemption, :only => :create
   before_action :require_context
 
   def index
