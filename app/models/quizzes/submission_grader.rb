@@ -38,6 +38,28 @@ module Quizzes
         user_answers << user_answer
         tally += (user_answer[:points] || 0).to_d if user_answer[:correct]
       end
+
+      # copy all answers having score from last marking, apply ONLY for ESSAY or FILE UPlOAD questions
+      lastAttempt = @submission.submitted_attempts.last
+      unless lastAttempt.nil?
+        last_submission = lastAttempt.submission_data
+
+        last_submission.each { |tmp|
+          sd = tmp.stringify_keys
+          data = user_answers.find  {|k| k[:question_id] == sd["question_id"]}
+
+          if data.nil? == false && sd["points"] > 0
+            if sd.has_key?("text") || sd.has_key?("attachment_ids") #only essay or file upload question type
+              data[:points] = sd["points"]
+              data[:correct] = sd["correct"]
+              unless sd["more_comments"].nil?
+                data[:more_comments] = sd["more_comments"]
+              end
+            end
+          end
+        }
+      end
+
       @submission.score = tally.to_d
       @submission.score = @submission.quiz.points_possible if @submission&.quiz && @submission&.quiz&.graded_survey?
       @submission.submission_data = user_answers
