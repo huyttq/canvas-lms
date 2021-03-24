@@ -363,9 +363,15 @@
             <%= t "This quiz has been excused" %>
           </div>
         <% elsif can_do(@quiz, @current_user, :submit) && !@lockdown_browser_authorized_to_view %>
-          <div class="take_quiz_button">
-            <%= link_to_take_or_retake_poll('class' => "btn btn-primary", 'id' => "take_quiz_link") %>
-          </div>
+          <% if @submission && @submission.pending_review? %>
+            <div class="take_quiz_button">
+              <%= t(:score_pending, "score pending review by the trainer") %>
+            </div>
+          <% else %>
+            <div class="take_quiz_button">
+              <%= link_to_take_or_retake_poll('class' => "btn btn-primary", 'id' => "take_quiz_link") %>
+            </div>
+          <% end %>
         <% end %>
       <% else %>
         <% if !@current_user && @quiz.graded? %>
