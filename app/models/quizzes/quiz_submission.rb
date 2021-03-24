@@ -161,6 +161,11 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
     question(id).present?
   end
 
+  def reset_answers?
+    currentNumOfAttempts = self.submitted_attempts.count + 1
+    currentNumOfAttempts % 3 == 1 # reset for attempt 1, 4, 7,...
+  end
+
   def temporary_data
     raise "Cannot view temporary data for completed quiz" unless !self.completed?
     raise "Cannot view temporary data for completed quiz" if graded?
@@ -169,10 +174,7 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
 
     begin
       unless self.submitted_attempts.nil? && self.submitted_attempts.last.nil?
-        currentNumOfAttempts = self.submitted_attempts.count + 1
-        if currentNumOfAttempts % 3 == 1 # reset for attempt 1, 4, 7,...
-          return res
-        end
+        return res if self.reset_answers?
 
         lastAttempt = self.submitted_attempts.last
         quizData = lastAttempt.quiz_data

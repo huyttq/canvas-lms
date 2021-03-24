@@ -33,31 +33,29 @@ module Quizzes
       tally = 0
       user_answers = []
       data = @submission.submission_data || {}
+      lastAttempt = @submission.submitted_attempts.last
+
       @submission.questions.each do |q|
         user_answer = self.class.score_question(q, data)
-        user_answers << user_answer
-        tally += (user_answer[:points] || 0).to_d if user_answer[:correct]
-      end
+        # copy all answers having score from last marking, apply ONLY for ESSAY or FILE UPlOAD questions
+        if !lastAttempt.nil? && !@submission.reset_answers?
+          if q["question_type"] == 'file_upload_question' || q["question_type"] == 'essay_question'
+            last_submission = lastAttempt.submission_data
 
-      # copy all answers having score from last marking, apply ONLY for ESSAY or FILE UPlOAD questions
-      lastAttempt = @submission.submitted_attempts.last
-      unless lastAttempt.nil?
-        last_submission = lastAttempt.submission_data
-
-        last_submission.each { |tmp|
-          sd = tmp.stringify_keys
-          data = user_answers.find  {|k| k[:question_id] == sd["question_id"]}
-
-          if data.nil? == false && sd["points"] > 0
-            if sd.has_key?("text") || sd.has_key?("attachment_ids") #only essay or file upload question type
-              data[:points] = sd["points"]
-              data[:correct] = sd["correct"]
+            sd = last_submission.find {|k| k["question_id"] == user_answer[:question_id]}
+            if !sd.nil? && sd["points"] > 0
+              Rails.logger.debug "------------COPY SCORE! FROM #{sd.inspect}"
+              Rails.logger.debug "------------COPY SCORE! TO #{user_answer.inspect}"
+              user_answer[:points] = sd["points"]
+              user_answer[:correct] = sd["correct"]
               unless sd["more_comments"].nil?
-                data[:more_comments] = sd["more_comments"]
+                user_answer[:more_comments] = sd["more_comments"]
               end
             end
           end
-        }
+        end
+        user_answers << user_answer
+        tally += (user_answer[:points] || 0).to_d if user_answer[:correct]
       end
 
       @submission.score = tally.to_d
