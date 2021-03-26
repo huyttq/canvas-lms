@@ -2830,6 +2830,7 @@ class ApplicationController < ActionController::Base
 
   def has_submission_exemption?
     return if ::Rails.env.development? || ::Rails.env.test?
+    return true if @context_membership.nil? #TODO: find out why admin user get nil
 
     is_ip_whitelisted? || is_role_whitelisted?
   end
