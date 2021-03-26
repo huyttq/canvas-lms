@@ -625,6 +625,14 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
     self.complete? || self.pending_review?
   end
 
+  def satisfactory?
+    self.kept_score >= self.points_possible_at_submission_time
+  end
+
+  def can_take_quiz?
+    !self.pending_review? && !self.satisfactory?
+  end
+
   def overdue?(strict=false)
     now = (Time.now - ((strict ? 1 : 5) * 60))
     !!(end_at && end_at.localtime < now)
