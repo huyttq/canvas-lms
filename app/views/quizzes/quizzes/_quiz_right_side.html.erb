@@ -92,7 +92,9 @@
       <% if allow_take && can_do(@quiz, @current_user, :submit) %>
         <div style="margin-top: 10px; font-size: 1.2em;">
         <% if (!@locked && (@quiz.unlimited_attempts? || @submission.attempts_left > 0)) || can_do(@quiz, @current_user, :update) %>
-          <%= link_to_take_or_retake_poll %><br/>
+          <% if (@submission.can_take_quiz?) %>
+            <%= link_to_take_or_retake_poll %><br/>
+          <% end %>
           <span style="font-size: 0.7em; padding-<%= direction('left') %>: 20px;">
             (<%= score_to_keep_message %>)
           </span>
