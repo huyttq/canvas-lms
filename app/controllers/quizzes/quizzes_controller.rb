@@ -378,6 +378,9 @@ class Quizzes::QuizzesController < ApplicationController
   def create
     if authorized_action(@context.quizzes.temp_record, @current_user, :create)
       @quiz = @context.quizzes.build
+      #TODO: parameterize num of attempts
+      @quiz.allowed_attempts = 3
+      @quiz.show_correct_answers = false
 
       return render_forbidden unless grading_periods_allow_submittable_create?(@quiz, params[:quiz])
       overrides = delete_override_params
