@@ -188,18 +188,18 @@ module CanvasSecurity
 
   def self.whitelist_ips
     @whitelist_ips ||= begin
-        res = config && config['whitelist_ips']
-        raise('whitelist_ips required, see config/security.yml') unless res
-        res
-      end
+      res = config && config['whitelist_ips']
+      raise('whitelist_ips required, see config/security.yml') unless res
+      res
+    end
   end
 
   def self.whitelist_roles
     @whitelist_roles ||= begin
-        res = config && config['whitelist_roles']
-        raise('whitelist_roles required, see config/security.yml') unless res
-        res
-      end
+      res = config && config['whitelist_roles']
+      raise('whitelist_roles required, see config/security.yml') unless res
+      res
+    end
   end
 
   # Creates a JWT token string
