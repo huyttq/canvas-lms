@@ -627,7 +627,7 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
   end
 
   def can_take_quiz?
-    !self.pending_review? && !self.satisfactory?
+    !self.pending_review? && !self.satisfactory? && !self.did_not_attend_training
   end
 
   def overdue?(strict=false)

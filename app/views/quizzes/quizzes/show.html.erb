@@ -370,8 +370,10 @@
               <%= link_to_take_or_retake_poll('class' => "btn btn-primary", 'id' => "take_quiz_link") %>
             </div>
           <% else %>
-              <div class="take_quiz_button">
-                <% if @submission.pending_review? %>
+              <div class="take_quiz_button"> 
+                <% if @submission.did_not_attend_training %>
+                  <%= t("You must attend the training class before taking the quiz") %>
+                <% elsif @submission.pending_review? %>
                   <%= t("The assessment is being marked by your trainer") %>
                 <% elsif @submission.satisfactory? %>
                   <%= t("SATISFACTORY") %>
