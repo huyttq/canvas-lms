@@ -376,7 +376,7 @@
                 <% elsif @submission.satisfactory? %>
                   <%= t("SATISFACTORY") %>
                 <% elsif @submission.did_not_attend_training %>
-                  <%= t("You must attend the training class before taking the quiz") %>
+                  <%= t("You have not attended training for this unit") %>
                 <% end %>
               </div>
           <% end %>
