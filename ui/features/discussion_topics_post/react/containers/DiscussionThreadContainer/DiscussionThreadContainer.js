@@ -22,7 +22,8 @@ import {CollapseReplies} from '../../components/CollapseReplies/CollapseReplies'
 import DateHelper from '../../../../../shared/datetime/dateHelper'
 import {
   DELETE_DISCUSSION_ENTRY,
-  UPDATE_DISCUSSION_ENTRY_PARTICIPANT
+  UPDATE_DISCUSSION_ENTRY_PARTICIPANT,
+  UPDATE_DISCUSSION_ENTRY
 } from '../../../graphql/Mutations'
 import {DeletedPostMessage} from '../../components/DeletedPostMessage/DeletedPostMessage'
 import {DISCUSSION_SUBENTRIES_QUERY} from '../../../graphql/Queries'
@@ -34,7 +35,7 @@ import LoadingIndicator from '@canvas/loading-indicator'
 import {PostMessage} from '../../components/PostMessage/PostMessage'
 import {PER_PAGE} from '../../utils/constants'
 import PropTypes from 'prop-types'
-import React, {useContext, useState} from 'react'
+import React, {useCallback, useContext, useEffect, useRef, useState} from 'react'
 import {ThreadActions} from '../../components/ThreadActions/ThreadActions'
 import {ThreadingToolbar} from '../../components/ThreadingToolbar/ThreadingToolbar'
 import {useMutation, useQuery} from 'react-apollo'
@@ -63,34 +64,53 @@ export const mockThreads = {
 }
 
 export const DiscussionThreadContainer = props => {
+  const AUTO_MARK_AS_READ_DELAY = 3000
+
   const {setOnFailure, setOnSuccess} = useContext(AlertManagerContext)
   const [expandReplies, setExpandReplies] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editorExpanded, setEditorExpanded] = useState(false)
+  const threadRef = useRef()
 
   const [deleteDiscussionEntry] = useMutation(DELETE_DISCUSSION_ENTRY, {
     onCompleted: data => {
       if (!data.deleteDiscussionEntry.errors) {
-        setOnSuccess(I18n.t('The entry was successfully deleted'))
+        setOnSuccess(I18n.t('The reply was successfully deleted.'))
       } else {
-        setOnFailure(I18n.t('There was an unexpected error while deleting the entry'))
+        setOnFailure(I18n.t('There was an unexpected error while deleting the reply.'))
       }
     },
     onError: () => {
-      setOnFailure(I18n.t('There was an unexpected error while deleting the entry'))
+      setOnFailure(I18n.t('There was an unexpected error while deleting the reply.'))
     }
   })
+
+  const [updateDiscussionEntry] = useMutation(UPDATE_DISCUSSION_ENTRY, {
+    onCompleted: data => {
+      if (!data.updateDiscussionEntry.errors) {
+        setOnSuccess(I18n.t('The reply was successfully updated.'))
+        setIsEditing(false)
+      } else {
+        setOnFailure(I18n.t('There was an unexpected error while updating the reply.'))
+      }
+    },
+    onError: () => {
+      setOnFailure(I18n.t('There was an unexpected error while updating the reply.'))
+    }
+  })
+
   const [updateDiscussionEntryParticipant] = useMutation(UPDATE_DISCUSSION_ENTRY_PARTICIPANT, {
     onCompleted: data => {
       if (!data || !data.updateDiscussionEntryParticipant) {
         return null
       }
-      setOnSuccess(I18n.t('The entry was successfully updated.'))
+      setOnSuccess(I18n.t('The reply was successfully updated.'))
     },
     onError: () => {
-      setOnFailure(I18n.t('There was an unexpected error updating the entry.'))
+      setOnFailure(I18n.t('There was an unexpected error updating the reply.'))
     }
   })
+
   const toggleRating = () => {
     updateDiscussionEntryParticipant({
       variables: {
@@ -108,6 +128,18 @@ export const DiscussionThreadContainer = props => {
       }
     })
   }
+
+  const markAsRead = useCallback(() => {
+    setTimeout(
+      updateDiscussionEntryParticipant({
+        variables: {
+          discussionEntryId: props.discussionEntry._id,
+          read: true
+        }
+      }),
+      AUTO_MARK_AS_READ_DELAY
+    )
+  }, [updateDiscussionEntryParticipant, props.discussionEntry._id])
 
   const marginDepth = `calc(${theme.variables.spacing.xxLarge} * ${props.depth})`
   const replyMarginDepth = `calc(${theme.variables.spacing.xxLarge} * ${props.depth + 1})`
@@ -162,6 +194,15 @@ export const DiscussionThreadContainer = props => {
     }
   }
 
+  const onUpdate = newMesssage => {
+    updateDiscussionEntry({
+      variables: {
+        discussionEntryId: props.discussionEntry._id,
+        message: newMesssage
+      }
+    })
+  }
+
   const renderPostMessage = () => {
     if (props.discussionEntry.deleted) {
       const name = props.discussionEntry.editor
@@ -187,6 +228,7 @@ export const DiscussionThreadContainer = props => {
           onCancel={() => {
             setIsEditing(false)
           }}
+          onSave={onUpdate}
         >
           <ThreadingToolbar>{threadActions}</ThreadingToolbar>
         </PostMessage>
@@ -198,9 +240,27 @@ export const DiscussionThreadContainer = props => {
   const canGrade =
     (isGraded(props.assignment) && props.discussionEntry.permissions?.update) || false
 
+  // Scrolling auto listener to mark messages as read
+  useEffect(() => {
+    const observer = new IntersectionObserver(markAsRead, {
+      root: null,
+      rootMargin: '0px',
+      threshold: 0.1
+    })
+
+    if (threadRef.current) observer.observe(threadRef.current)
+
+    return () => {
+      if (threadRef.current) observer.unobserve(threadRef.current)
+    }
+  }, [threadRef, markAsRead])
+
   return (
     <>
-      <div style={{marginLeft: marginDepth, paddingLeft: theme.variables.spacing.small}}>
+      <div
+        style={{marginLeft: marginDepth, paddingLeft: theme.variables.spacing.small}}
+        ref={threadRef}
+      >
         <Flex>
           <Flex.Item shouldShrink shouldGrow>
             {renderPostMessage()}
@@ -211,11 +271,14 @@ export const DiscussionThreadContainer = props => {
                 id={props.discussionEntry.id}
                 isUnread={!props.discussionEntry.read}
                 onToggleUnread={toggleUnread}
-                onMarkAllAsUnread={() => {}}
                 onDelete={props.discussionEntry.permissions?.delete ? onDelete : null}
-                onEdit={() => {
-                  setIsEditing(true)
-                }}
+                onEdit={
+                  props.discussionEntry.permissions?.update
+                    ? () => {
+                        setIsEditing(true)
+                      }
+                    : null
+                }
                 onOpenInSpeedGrader={
                   canGrade
                     ? () => {
@@ -300,7 +363,7 @@ const DiscussionSubentries = props => {
   })
 
   if (subentries.error) {
-    setOnFailure(I18n.t('Error loading replies'))
+    setOnFailure(I18n.t('There was an unexpected error loading the replies.'))
     return null
   }
 

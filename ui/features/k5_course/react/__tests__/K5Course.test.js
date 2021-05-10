@@ -21,7 +21,13 @@ import moxios from 'moxios'
 import {act, fireEvent, render, waitFor} from '@testing-library/react'
 import {K5Course} from '../K5Course'
 import fetchMock from 'fetch-mock'
-import {MOCK_COURSE_APPS, MOCK_COURSE_TABS, MOCK_ASSIGNMENT_GROUPS, MOCK_ENROLLMENTS} from './mocks'
+import {
+  MOCK_COURSE_APPS,
+  MOCK_COURSE_TABS,
+  MOCK_GRADING_PERIODS_EMPTY,
+  MOCK_ASSIGNMENT_GROUPS,
+  MOCK_ENROLLMENTS
+} from './mocks'
 import {TAB_IDS} from '@canvas/k5/react/utils'
 
 const currentUser = {
@@ -50,12 +56,17 @@ const defaultProps = {
   canManage: false,
   courseOverview: '<h2>Time to learn!</h2>',
   hideFinalGrades: false,
-  userIsInstructor: false
+  userIsInstructor: false,
+  showStudentView: false,
+  studentViewPath: '/courses/30/student_view/1'
 }
 const FETCH_APPS_URL = '/api/v1/courses/30/external_tools/visible_course_nav_tools'
 const FETCH_TABS_URL = '/api/v1/courses/30/tabs'
+const GRADING_PERIODS_URL = encodeURI(
+  '/api/v1/courses/30?include[]=grading_periods&include[]=current_grading_period_scores&include[]=total_scores'
+)
 const ASSIGNMENT_GROUPS_URL = encodeURI(
-  '/api/v1/courses/30/assignment_groups?include[]=assignments&include[]=submission'
+  '/api/v1/courses/30/assignment_groups?include[]=assignments&include[]=submission&include[]=read_state'
 )
 const ENROLLMENTS_URL = '/api/v1/courses/30/enrollments'
 
@@ -65,6 +76,7 @@ beforeAll(() => {
   moxios.install()
   fetchMock.get(FETCH_APPS_URL, JSON.stringify(MOCK_COURSE_APPS))
   fetchMock.get(FETCH_TABS_URL, JSON.stringify(MOCK_COURSE_TABS))
+  fetchMock.get(GRADING_PERIODS_URL, JSON.stringify(MOCK_GRADING_PERIODS_EMPTY))
   fetchMock.get(ASSIGNMENT_GROUPS_URL, JSON.stringify(MOCK_ASSIGNMENT_GROUPS))
   fetchMock.get(ENROLLMENTS_URL, JSON.stringify(MOCK_ENROLLMENTS))
   if (!modulesContainer) {
@@ -182,6 +194,24 @@ describe('K-5 Subject Course', () => {
     it('Does not show a manage button when the user does not have manage permissions', () => {
       const {queryByRole} = render(<K5Course {...defaultProps} />)
       expect(queryByRole('button', {name: 'Manage'})).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Student View Button functionality', () => {
+    it('Shows the Student View button when the user has student view mode access', () => {
+      const {queryByRole} = render(<K5Course {...defaultProps} showStudentView />)
+      expect(queryByRole('link', {name: 'Student View'})).toBeInTheDocument()
+    })
+
+    it('Does not show the Student View button when the user does not have student view mode access', () => {
+      const {queryByRole} = render(<K5Course {...defaultProps} />)
+      expect(queryByRole('link', {name: 'Student View'})).not.toBeInTheDocument()
+    })
+
+    it('Should open student view path when clicked', () => {
+      const {getByRole} = render(<K5Course {...defaultProps} showStudentView />)
+      const studentViewBtn = getByRole('link', {name: 'Student View'})
+      expect(studentViewBtn.href).toBe('http://localhost/courses/30/student_view/1')
     })
   })
 

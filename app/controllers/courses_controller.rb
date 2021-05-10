@@ -358,7 +358,7 @@ class CoursesController < ApplicationController
 
   before_action :require_user, :only => [:index, :activity_stream, :activity_stream_summary, :effective_due_dates, :offline_web_exports, :start_offline_web_export]
   before_action :require_user_or_observer, :only=>[:user_index]
-  before_action :require_context, :only => [:roster, :locks, :create_file, :ping, :effective_due_dates, :offline_web_exports, :start_offline_web_export, :user_progress]
+  before_action :require_context, :only => [:roster, :locks, :create_file, :ping, :confirm_action, :copy, :effective_due_dates, :offline_web_exports, :link_validator, :settings, :start_offline_web_export, :statistics, :user_progress]
   skip_after_action :update_enrollment_last_activity_at, only: [:enrollment_invitation, :activity_stream_summary]
 
   include Api::V1::Course
@@ -1350,7 +1350,6 @@ class CoursesController < ApplicationController
   end
 
   def statistics
-    get_context
     if authorized_action(@context, @current_user, :read_reports)
       @student_ids = @context.student_ids
 
@@ -1401,7 +1400,6 @@ class CoursesController < ApplicationController
   end
 
   def settings
-    get_context
     if authorized_action(@context, @current_user, :read_as_admin)
       load_all_contexts(:context => @context)
 
@@ -2082,7 +2080,9 @@ class CoursesController < ApplicationController
                    is_student: @context.user_is_student?(@current_user),
                    is_instructor: @context.user_is_instructor?(@current_user),
                    course_overview: @context&.wiki&.front_page&.body,
-                   hide_final_grades: @context.hide_final_grades?
+                   hide_final_grades: @context.hide_final_grades?,
+                   show_student_view: can_do(@context, @current_user, :use_student_view),
+                   student_view_path: course_student_view_path(course_id: @context, redirect_to_referer: 1)
                  }
                })
 
@@ -2229,7 +2229,6 @@ class CoursesController < ApplicationController
   end
 
   def confirm_action
-    get_context
     params[:event] ||= (@context.claimed? || @context.created? || @context.completed?) ? 'delete' : 'conclude'
     return unless authorized_action(@context, @current_user, permission_for_event(params[:event]))
   end
@@ -2411,7 +2410,6 @@ class CoursesController < ApplicationController
   end
 
   def copy
-    get_context
     return unless authorized_action(@context, @current_user, :read_as_admin)
 
     account = @context.account
@@ -2707,7 +2705,7 @@ class CoursesController < ApplicationController
       event = params[:course][:event].to_s
       # check permissions on processable events
       # allow invalid and non_events to pass through
-      if %w[offer claim complete delete undelete].include?(event)
+      if %w[offer claim conclude delete undelete].include?(event)
         return unless authorized_action(@course, @current_user, permission_for_event(event))
       end
       # authorized, invalid, and non_events are processed
@@ -2840,7 +2838,7 @@ class CoursesController < ApplicationController
         event = params[:course][:event].to_s
         # check permissions on processable events
         # allow invalid and non_events to pass through
-        if %w[offer claim complete delete undelete].include?(event)
+        if %w[offer claim conclude delete undelete].include?(event)
           return unless authorized_action(@course, @current_user, permission_for_event(event))
         end
         # authorized, invalid, and non_events are processed
@@ -3287,7 +3285,7 @@ class CoursesController < ApplicationController
   def permission_for_event(event)
     @context ||= @course
     case event
-    when 'claim', 'offer'
+    when 'offer', 'claim'
       if @context.root_account.feature_enabled?(:granular_permissions_manage_courses)
         :manage_courses_publish
       else
@@ -3369,7 +3367,6 @@ class CoursesController < ApplicationController
   end
 
   def link_validator
-    get_context
     return unless authorized_action(@context, @current_user, :manage_content)
     # render view
   end

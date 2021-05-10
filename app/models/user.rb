@@ -24,6 +24,7 @@ class User < ActiveRecord::Base
   GRAVATAR_PATTERN = /^https?:\/\/[a-zA-Z0-9.-]+\.gravatar\.com\//
   MAX_ROOT_ACCOUNT_ID_SYNC_ATTEMPTS = 5
 
+  include ManyRootAccounts
   include TurnitinID
   include Pronouns
 
@@ -126,6 +127,7 @@ class User < ActiveRecord::Base
   has_many :attachments, :as => 'context', :dependent => :destroy
   has_many :active_images, -> { where("attachments.file_state != ? AND attachments.content_type LIKE 'image%'", 'deleted').order('attachments.display_name').preload(:thumbnail) }, as: :context, inverse_of: :context, class_name: 'Attachment'
   has_many :active_assignments, -> { where("assignments.workflow_state<>'deleted'") }, as: :context, inverse_of: :context, class_name: 'Assignment'
+  has_many :mentions, inverse_of: :user
   has_many :all_attachments, :as => 'context', :class_name => 'Attachment'
   has_many :assignment_student_visibilities
   has_many :quiz_student_visibilities, :class_name => 'Quizzes::QuizStudentVisibility'
@@ -441,12 +443,6 @@ class User < ActiveRecord::Base
 
   def self.skip_updating_account_associations?
     !!@skip_updating_account_associations
-  end
-
-  def global_root_account_ids
-    root_account_ids&.map do |id|
-      Shard.global_id_for(id, self.shard)
-    end
   end
 
   # Update the root_account_ids column on the user

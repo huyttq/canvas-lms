@@ -77,7 +77,7 @@ export const fetchHomeroomAnnouncements = cards =>
       )
   ).then(announcements => announcements.filter(a => a))
 
-export const HomeroomPage = ({cards, cardsSettled, visible, canCreateCourses}) => {
+export const HomeroomPage = ({cards, cardsSettled, visible, createPermissions}) => {
   const [dashboardCards, setDashboardCards] = useState([])
   const [homeroomAnnouncements, setHomeroomAnnouncements] = useState([])
   const [announcementsLoading, setAnnouncementsLoading] = useState(true)
@@ -124,6 +124,8 @@ export const HomeroomPage = ({cards, cardsSettled, visible, canCreateCourses}) =
     )
   }
 
+  const canCreateCourses = createPermissions === 'admin' || createPermissions === 'teacher'
+
   return (
     <section
       id="dashboard_page_homeroom"
@@ -145,6 +147,7 @@ export const HomeroomPage = ({cards, cardsSettled, visible, canCreateCourses}) =
             <Flex.Item>
               <Tooltip renderTip={I18n.t('Start a new course')}>
                 <IconButton
+                  data-testid="new-course-button"
                   screenReaderLabel={I18n.t('Open new course modal')}
                   withBackground={false}
                   withBorder={false}
@@ -170,7 +173,11 @@ export const HomeroomPage = ({cards, cardsSettled, visible, canCreateCourses}) =
         )}
       </View>
       {courseModalOpen && (
-        <CreateCourseModal isModalOpen={courseModalOpen} setModalOpen={setCourseModalOpen} />
+        <CreateCourseModal
+          isModalOpen={courseModalOpen}
+          setModalOpen={setCourseModalOpen}
+          permissions={createPermissions}
+        />
       )}
     </section>
   )
@@ -180,7 +187,7 @@ HomeroomPage.propTypes = {
   cards: PropTypes.array,
   cardsSettled: PropTypes.bool.isRequired,
   visible: PropTypes.bool.isRequired,
-  canCreateCourses: PropTypes.bool.isRequired
+  createPermissions: PropTypes.oneOf(['admin', 'teacher', 'none']).isRequired
 }
 
 export default HomeroomPage

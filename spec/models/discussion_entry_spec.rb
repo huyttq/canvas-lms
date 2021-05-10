@@ -89,12 +89,33 @@ describe DiscussionEntry do
     expect(entry.grants_right?(@student, :read)).to be(false)
   end
 
+  context "mentions" do
+    before :once do
+      course_with_teacher(:active_all => true)
+      student_in_course(:active_all => true)
+      @mentioned_student = @student
+      student_in_course(:active_all => true)
+      @topic = @course.discussion_topics.create!(:user => @teacher, :message => "Hi there")
+    end
+
+    it 'should create on entry save' do
+      entry = @topic.discussion_entries.new(user: @student)
+      allow(entry).to receive(:message).and_return("<p>hello</p><span data-mention=#{@mentioned_student.id} </span> what's up dude")
+      expect{entry.save!}.to change{entry.mentions.count}.from(0).to(1)
+      expect(entry.mentions.take.user_id).to eq @mentioned_student.id
+    end
+  end
+
   context "entry notifications" do
     before :once do
       course_with_teacher(:active_all => true)
       student_in_course(:active_all => true)
       @non_posting_student = @student
       student_in_course(:active_all => true)
+
+      @notification_mention = "New Discussion Mention"
+      n = Notification.create(:name => @notification_mention, :category => "TestImmediately")
+      NotificationPolicy.create(:notification => n, :communication_channel => @student.communication_channel, :frequency => "immediately")
 
       @notification_name = "New Discussion Entry"
       n = Notification.create(:name => @notification_name, :category => "TestImmediately")
@@ -189,6 +210,17 @@ describe DiscussionEntry do
       entry = topic.discussion_entries.create!(:user => @teacher, :message => "Oh, and another thing...")
       expect(entry.messages_sent[@notification_name]).to be_blank
       expect(entry.messages_sent["Announcement Reply"]).not_to be_blank
+    end
+
+    it "should send one notification to mentioned users" do
+      topic = @course.discussion_topics.create!(:user => @teacher, :message => "This is an important announcement")
+      topic.subscribe(@student)
+      entry = topic.discussion_entries.new(:user => @teacher, :message => "Oh, and another thing...")
+      entry.mentions.new(user: @student, root_account_id: @course.root_account_id)
+      entry.save! # also saves the mention.
+      expect(entry.messages_sent[@notification_name]).to be_blank
+      expect(entry.messages_sent[@notification_mention]).not_to be_blank
+      expect(entry.messages_sent["Announcement Reply"]).to be_blank
     end
 
   end

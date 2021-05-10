@@ -56,6 +56,7 @@ class Types::MutationType < Types::ApplicationObjectType
     Sets the post policy for the course, with an option to override and delete
     existing assignment post policies.
   DESC
+  field :create_learning_outcome, mutation: Mutations::CreateLearningOutcome
   field :create_outcome_proficiency, mutation: Mutations::CreateOutcomeProficiency
   field :update_outcome_proficiency, mutation: Mutations::UpdateOutcomeProficiency
   field :delete_outcome_proficiency, mutation: Mutations::DeleteOutcomeProficiency
@@ -84,6 +85,8 @@ class Types::MutationType < Types::ApplicationObjectType
   field :update_discussion_entry_participant, mutation: Mutations::UpdateDiscussionEntryParticipant
   field :import_outcomes, mutation: Mutations::ImportOutcomes
   field :set_friendly_description, mutation: Mutations::SetFriendlyDescription
+  field :create_comment_bank_item, mutation: Mutations::CreateCommentBankItem
+  field :delete_comment_bank_item, mutation: Mutations::DeleteCommentBankItem
 
   # TODO: Remove the in active development string from here once this is more
   #       finalized.

@@ -17,157 +17,253 @@
  */
 
 import React from 'react'
-import {render, fireEvent, waitFor, act} from '@testing-library/react'
+import {render as rawRender, fireEvent, act} from '@testing-library/react'
 import {within} from '@testing-library/dom'
 import OutcomeEditModal from '../OutcomeEditModal'
-import {updateOutcome} from '@canvas/outcomes/graphql/Management'
+import * as Management from '@canvas/outcomes/graphql/Management'
 import * as FlashAlert from '@canvas/alerts/react/FlashAlert'
 import RichContentEditor from '@canvas/rce/RichContentEditor'
+import OutcomesContext from '@canvas/outcomes/react/contexts/OutcomesContext'
+import {MockedProvider} from '@apollo/react-testing'
+import {setFriendlyDescriptionOutcomeMock} from '@canvas/outcomes/mocks/Management'
 
-jest.mock('@canvas/outcomes/graphql/Management')
 jest.mock('@canvas/rce/RichContentEditor')
 jest.useFakeTimers()
 
+const render = (children, {contextType = 'Account', contextId = '1'} = {}) => {
+  return rawRender(
+    <OutcomesContext.Provider value={{env: {contextType, contextId}}}>
+      {children}
+    </OutcomesContext.Provider>
+  )
+}
+
 describe('OutcomeEditModal', () => {
   let onCloseHandlerMock
-  const defaultProps = (props = {}) => ({
-    outcome: {
-      _id: '1',
-      title: 'Outcome',
-      description: 'Outcome description',
-      displayName: 'Friendly outcome name'
-    },
-    isOpen: true,
-    onCloseHandler: onCloseHandlerMock,
-    ...props
-  })
+  let updateOutcomeSpy
+  let showFlashAlertSpy
+  let props
 
   beforeEach(() => {
     onCloseHandlerMock = jest.fn()
     RichContentEditor.callOnRCE = jest.fn()
+    updateOutcomeSpy = jest.spyOn(Management, 'updateOutcome')
+    showFlashAlertSpy = jest.spyOn(FlashAlert, 'showFlashAlert')
+
+    props = {
+      outcome: {
+        _id: '1',
+        title: 'Outcome',
+        description: 'Outcome description',
+        displayName: 'Friendly outcome name',
+        contextType: 'Account',
+        contextId: 1
+      },
+      isOpen: true,
+      onCloseHandler: onCloseHandlerMock
+    }
   })
 
-  afterEach(() => {
-    jest.clearAllMocks()
-  })
+  const renderWithProvider = ({
+    overrides = {},
+    failResponse = false,
+    failMutation = false,
+    env = {
+      contextType: 'Account',
+      contextId: '1'
+    }
+  } = {}) => {
+    const mocks = [
+      setFriendlyDescriptionOutcomeMock({
+        failResponse,
+        failMutation
+      })
+    ]
+
+    return render(
+      <OutcomesContext.Provider value={{env}}>
+        <MockedProvider mocks={mocks}>
+          <OutcomeEditModal {...props} {...overrides} />
+        </MockedProvider>
+      </OutcomesContext.Provider>
+    )
+  }
 
   it('shows modal if isOpen prop true', () => {
-    const {getByText} = render(<OutcomeEditModal {...defaultProps()} />)
+    const {getByText} = renderWithProvider()
     expect(getByText('Edit Outcome')).toBeInTheDocument()
   })
 
   it('does not show modal if isOpen prop false', () => {
-    const {queryByText} = render(<OutcomeEditModal {...defaultProps({isOpen: false})} />)
+    const {queryByText} = renderWithProvider({overrides: {isOpen: false}})
     expect(queryByText('Edit Outcome')).not.toBeInTheDocument()
   })
 
   it('calls onCloseHandler on Save button click', () => {
-    const {getByLabelText, getByText} = render(<OutcomeEditModal {...defaultProps()} />)
+    updateOutcomeSpy.mockReturnValue(Promise.resolve({status: 200}))
+    const {getByLabelText, getByText} = renderWithProvider()
     fireEvent.change(getByLabelText('Name'), {target: {value: 'Outcome 123'}})
     fireEvent.click(getByText('Save'))
     expect(onCloseHandlerMock).toHaveBeenCalledTimes(1)
   })
 
   it('calls onCloseHandler on Cancel button click', () => {
-    const {getByText} = render(<OutcomeEditModal {...defaultProps()} />)
+    const {getByText} = renderWithProvider()
     fireEvent.click(getByText('Cancel'))
     expect(onCloseHandlerMock).toHaveBeenCalledTimes(1)
   })
 
   it('calls onCloseHandler on Close (X) button click', () => {
-    const {getByRole} = render(<OutcomeEditModal {...defaultProps()} />)
+    const {getByRole} = renderWithProvider()
     fireEvent.click(within(getByRole('dialog')).getByText('Close'))
     expect(onCloseHandlerMock).toHaveBeenCalledTimes(1)
   })
 
   it('shows error message below Name field if no name and disables Save button', () => {
-    const {getByText, getByLabelText} = render(<OutcomeEditModal {...defaultProps()} />)
+    const {getByText, getByLabelText} = renderWithProvider()
     fireEvent.change(getByLabelText('Name'), {target: {value: ''}})
     expect(getByText('Save').closest('button')).toHaveAttribute('disabled')
     expect(getByText('Cannot be blank')).toBeInTheDocument()
   })
 
   it('shows error message below Name field if name includes only spaces and disables Save button', () => {
-    const {getByText, getByLabelText} = render(<OutcomeEditModal {...defaultProps()} />)
+    const {getByText, getByLabelText} = renderWithProvider()
     fireEvent.change(getByLabelText('Name'), {target: {value: '  '}})
     expect(getByText('Save').closest('button')).toHaveAttribute('disabled')
     expect(getByText('Cannot be blank')).toBeInTheDocument()
   })
 
   it('shows error message below Name field if name > 255 characters and disables Save button', () => {
-    const {getByText, getByLabelText} = render(<OutcomeEditModal {...defaultProps()} />)
+    const {getByText, getByLabelText} = renderWithProvider()
     fireEvent.change(getByLabelText('Name'), {target: {value: 'a'.repeat(256)}})
     expect(getByText('Must be 255 characters or less')).toBeInTheDocument()
     expect(getByText('Save').closest('button')).toHaveAttribute('disabled')
   })
 
   it('shows error message below displayName field if displayName > 255 characters and disables Save button', () => {
-    const {getByText, getByLabelText} = render(<OutcomeEditModal {...defaultProps()} />)
+    const {getByText, getByLabelText} = renderWithProvider()
     fireEvent.change(getByLabelText('Friendly Name'), {target: {value: 'a'.repeat(256)}})
     expect(getByText('Must be 255 characters or less')).toBeInTheDocument()
     expect(getByText('Save').closest('button')).toHaveAttribute('disabled')
   })
 
   it('updates only outcome name if only name is changed', async () => {
-    updateOutcome.mockReturnValue(Promise.resolve({status: 200}))
-    const {getByText, getByLabelText} = render(<OutcomeEditModal {...defaultProps()} />)
+    updateOutcomeSpy.mockReturnValue(Promise.resolve({status: 200}))
+    const {getByText, getByLabelText} = renderWithProvider()
     fireEvent.change(getByLabelText('Name'), {target: {value: 'Updated name'}})
     fireEvent.click(getByText('Save'))
     await act(async () => jest.runAllTimers())
-    expect(updateOutcome).toHaveBeenCalledWith('1', {title: 'Updated name'})
+    expect(updateOutcomeSpy).toHaveBeenCalledWith('1', {title: 'Updated name'})
   })
 
   it('updates only outcome description if only description is changed', async () => {
-    updateOutcome.mockReturnValue(Promise.resolve({status: 200}))
+    updateOutcomeSpy.mockReturnValue(Promise.resolve({status: 200}))
     RichContentEditor.callOnRCE.mockReturnValue('Updated description')
-    const {getByText} = render(<OutcomeEditModal {...defaultProps()} />)
+    const {getByText} = renderWithProvider()
     fireEvent.click(getByText('Save'))
     await act(async () => jest.runAllTimers())
-    expect(updateOutcome).toHaveBeenCalledWith('1', {description: 'Updated description'})
+    expect(updateOutcomeSpy).toHaveBeenCalledWith('1', {description: 'Updated description'})
   })
 
   it('updates only outcome display name if only display name is changed', async () => {
-    updateOutcome.mockReturnValue(Promise.resolve({status: 200}))
-    const {getByText, getByLabelText} = render(<OutcomeEditModal {...defaultProps()} />)
+    updateOutcomeSpy.mockReturnValue(Promise.resolve({status: 200}))
+    const {getByText, getByLabelText} = renderWithProvider()
     fireEvent.change(getByLabelText('Friendly Name'), {target: {value: 'Updated friendly name'}})
     fireEvent.click(getByText('Save'))
     await act(async () => jest.runAllTimers())
-    expect(updateOutcome).toHaveBeenCalledWith('1', {display_name: 'Updated friendly name'})
+    expect(updateOutcomeSpy).toHaveBeenCalledWith('1', {display_name: 'Updated friendly name'})
+  })
+
+  it('updates only alternate description if only alternate description is changed', async () => {
+    const {getByText, getByLabelText} = renderWithProvider()
+    fireEvent.change(getByLabelText('Alternative description (for parent/student display)'), {
+      target: {value: 'Updated alternate description'}
+    })
+    fireEvent.click(getByText('Save'))
+    await act(async () => jest.runAllTimers())
+    expect(showFlashAlertSpy).toHaveBeenCalledWith({
+      message: 'This outcome was successfully updated.',
+      type: 'success'
+    })
+  })
+
+  it('handles altenate descritpion update failure (response)', async () => {
+    const {getByText, getByLabelText} = renderWithProvider({failResponse: true})
+    fireEvent.change(getByLabelText('Alternative description (for parent/student display)'), {
+      target: {value: 'Updated alternate description'}
+    })
+    fireEvent.click(getByText('Save'))
+    await act(async () => jest.runAllTimers())
+    expect(showFlashAlertSpy).toHaveBeenCalledWith({
+      message: 'An error occurred while updating this outcome.',
+      type: 'error'
+    })
+  })
+
+  it('handles altenate descritpion update failure (mutation)', async () => {
+    const {getByText, getByLabelText} = renderWithProvider({failMutation: true})
+    fireEvent.change(getByLabelText('Alternative description (for parent/student display)'), {
+      target: {value: 'Updated alternate description'}
+    })
+    fireEvent.click(getByText('Save'))
+    await act(async () => jest.runAllTimers())
+    expect(showFlashAlertSpy).toHaveBeenCalledWith({
+      message: 'An error occurred while updating this outcome.',
+      type: 'error'
+    })
+  })
+
+  it('shows error message below alternate description field if alternate description > 255 characters', () => {
+    const {getByText, getByLabelText} = renderWithProvider()
+    fireEvent.change(getByLabelText('Alternative description (for parent/student display)'), {
+      target: {value: 'a'.repeat(256)}
+    })
+    expect(getByText('Must be 255 characters or less')).toBeInTheDocument()
   })
 
   it('displays flash confirmation with proper message if update request succeeds', async () => {
-    const showFlashAlertSpy = jest.spyOn(FlashAlert, 'showFlashAlert')
-    updateOutcome.mockReturnValue(Promise.resolve({status: 200}))
-    const {getByText, getByLabelText} = render(<OutcomeEditModal {...defaultProps()} />)
+    updateOutcomeSpy.mockReturnValue(Promise.resolve({status: 200}))
+    const {getByText, getByLabelText} = renderWithProvider()
     fireEvent.change(getByLabelText('Name'), {target: {value: 'Outcome 123'}})
     fireEvent.click(getByText('Save'))
     await act(async () => jest.runAllTimers())
-    expect(updateOutcome).toHaveBeenCalledWith('1', {
+    expect(updateOutcomeSpy).toHaveBeenCalledWith('1', {
       title: 'Outcome 123'
     })
-    await waitFor(() => {
-      expect(showFlashAlertSpy).toHaveBeenCalledWith({
-        message: 'This outcome was successfully updated.',
-        type: 'success'
-      })
+    expect(showFlashAlertSpy).toHaveBeenCalledWith({
+      message: 'This outcome was successfully updated.',
+      type: 'success'
     })
   })
 
   it('displays flash error if update request fails', async () => {
-    const showFlashAlertSpy = jest.spyOn(FlashAlert, 'showFlashAlert')
-    updateOutcome.mockReturnValue(Promise.reject(new Error('Network error')))
-    const {getByText, getByLabelText} = render(<OutcomeEditModal {...defaultProps()} />)
+    updateOutcomeSpy.mockReturnValue(Promise.reject(new Error('Network error')))
+    const {getByText, getByLabelText} = renderWithProvider()
     fireEvent.change(getByLabelText('Name'), {target: {value: 'Outcome 123'}})
     fireEvent.click(getByText('Save'))
     await act(async () => jest.runAllTimers())
-    expect(updateOutcome).toHaveBeenCalledWith('1', {
+    expect(updateOutcomeSpy).toHaveBeenCalledWith('1', {
       title: 'Outcome 123'
     })
-    await waitFor(() => {
-      expect(showFlashAlertSpy).toHaveBeenCalledWith({
-        message: 'An error occurred while updating this outcome: Network error',
-        type: 'error'
-      })
+    expect(showFlashAlertSpy).toHaveBeenCalledWith({
+      message: 'An error occurred while updating this outcome: Network error',
+      type: 'error'
     })
+  })
+
+  it('Shows forms elements when editing in same context', () => {
+    const {getByTestId} = renderWithProvider()
+    expect(getByTestId('name-input')).toBeInTheDocument()
+    expect(getByTestId('display-name-input')).toBeInTheDocument()
+    expect(getByTestId('description-input')).toBeInTheDocument()
+    expect(getByTestId('alternate-description-input')).toBeInTheDocument()
+  })
+
+  it('Hides forms elements when editing in different context', () => {
+    const {queryByTestId} = renderWithProvider({env: {contextType: 'Course', contextId: '1'}})
+    expect(queryByTestId('name-input')).not.toBeInTheDocument()
+    expect(queryByTestId('display-name-input')).not.toBeInTheDocument()
+    expect(queryByTestId('description-input')).not.toBeInTheDocument()
+    expect(queryByTestId('alternate-description-input')).toBeInTheDocument()
   })
 })
