@@ -621,6 +621,8 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
   end
 
   def satisfactory?
+    return false if self.kept_score.nil?
+
     self.kept_score >= self.points_possible_at_submission_time
   end
 
