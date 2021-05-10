@@ -140,6 +140,11 @@ window.moderation = {
       .find('.unlocked')
       .showIf(submission.manually_unlocked)
 
+    $student
+      .toggleClass('did_not_attend_training', !!submission.did_not_attend_training)
+      .find('.did_not_attend_training')
+      .showIf(submission.did_not_attend_training)
+
     updateExtraTime($student, submission.extra_time)
   },
   lastUpdatedAt: '',
@@ -251,10 +256,11 @@ $(document).ready(function(event) {
       student_ids.push($(this).attr('data-id'))
       const student_data = {
         manually_unlocked: $student.hasClass('manually_unlocked') ? '1' : '0',
+        did_not_attend_training: $student.hasClass('did_not_attend_training') ? '1' : '0',
         extra_attempts: parseInt($student.find('.extra_attempts').text(), 10) || '',
         extra_time: parseInt($student.find('.extra_time').text(), 10) || ''
       }
-      $.each(['manually_unlocked', 'extra_attempts', 'extra_time'], function() {
+      $.each(['manually_unlocked', 'did_not_attend_training', 'extra_attempts', 'extra_time'], function() {
         if (data[this] == null) {
           data[this] = student_data[this].toString()
         } else if (data[this] != student_data[this].toString()) {
@@ -284,6 +290,7 @@ $(document).ready(function(event) {
     const $student = $(this).parents('.student')
     const data = {
       manually_unlocked: $student.hasClass('manually_unlocked') ? '1' : '0',
+      did_not_attend_training: $student.hasClass('did_not_attend_training') ? '1' : '0',
       extra_attempts: parseInt($student.find('.extra_attempts').text(), 10) || '',
       extra_time:
         parseInt(

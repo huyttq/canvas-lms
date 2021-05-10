@@ -51,6 +51,7 @@
       <th scope="col" style="<%= hidden if @quiz.allowed_attempts < 0 %>"><%= t('headers.attempts_left', "Attempts Left") %></th>
       <th scope='col'><%= t('headers.score', "Score") %></th>
       <% manually_unlocked_title = t('titles.manually_unlocked', "Manually Unlocked") %>
+      <% did_not_attend_training_title = t('titles.did_not_attend_training', "Did NOT Attend Training") %>
       <th scope="col" class="unlocked_col"><span class="screenreader-only"><%= manually_unlocked_title %></span>&nbsp;</th>
       <th scope="col" class="edit">
         <a href="#" class="reload_link" role="button"><%= image_tag "ajax-reload.gif", alt: t(:reload_student_table, "Reload student table") %></a>
@@ -111,6 +112,7 @@
         </td>
         <td class="unlocked_col">
           <span class="unlocked" title="<%= manually_unlocked_title %>" style="<%= hidden unless submission && submission.manually_unlocked %>"><i class="icon-unlock standalone-icon" alt="<%= manually_unlocked_title %>"><span class="screenreader-only"><%= manually_unlocked_title %></span></i></span>
+          <span class="did_not_attend_training" title="<%= did_not_attend_training_title %>" style="<%= hidden unless submission && submission.did_not_attend_training %>"><i class="icon-unpublish" style="color: red" alt="<%= did_not_attend_training_title %>"><span class="screenreader-only"><%= did_not_attend_training_title %></span></i></span>
         </td>
         <td class="edit links">
           <% cue_title = t('titles.change_user_extensions', "Change user extensions") %>
@@ -218,6 +220,13 @@
       <input type="checkbox" name="manually_unlocked" id="extension_manually_unlocked" value="1"/>
       <label for="extension_manually_unlocked">
         <%= t('labels.manually_unlock', "Manually unlock the quiz for the next attempt") %>
+      </label>
+    </div>
+    <div class="field did_not_attend_training">
+      <input type="hidden" aria-hidden='true' name="did_not_attend_training" value="0"/>
+      <input type="checkbox" name="did_not_attend_training" id="extension_did_not_attend_training" value="1"/>
+      <label for="extension_did_not_attend_training">
+        <%= t('labels.did_not_attend_training', "Did NOT attend training class") %>
       </label>
     </div>
 

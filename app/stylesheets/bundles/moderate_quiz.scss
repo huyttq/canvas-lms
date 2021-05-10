@@ -117,7 +117,7 @@
       }
     }
   }
-  .manually_unlock, .one_time_results {
+  .manually_unlock, .one_time_results, .did_not_attend_training {
     input {
       float: direction(left);
       margin-#{direction(right)}: 10px;
