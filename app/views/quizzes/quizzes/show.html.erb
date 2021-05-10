@@ -371,12 +371,12 @@
             </div>
           <% else %>
               <div class="take_quiz_button"> 
-                <% if @submission.did_not_attend_training %>
-                  <%= t("You must attend the training class before taking the quiz") %>
-                <% elsif @submission.pending_review? %>
+                <% if @submission.pending_review? %>
                   <%= t("The assessment is being marked by your trainer") %>
                 <% elsif @submission.satisfactory? %>
                   <%= t("SATISFACTORY") %>
+                <% elsif @submission.did_not_attend_training %>
+                  <%= t("You must attend the training class before taking the quiz") %>
                 <% end %>
               </div>
           <% end %>
