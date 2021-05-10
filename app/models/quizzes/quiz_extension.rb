@@ -23,7 +23,7 @@ class Quizzes::QuizExtension
   attr_accessor :quiz_submission, :ext_params
 
   delegate :quiz_id, :user_id, :extra_attempts, :extra_time,
-           :manually_unlocked, :end_at, :to => :quiz_submission
+           :manually_unlocked, :end_at, :did_not_attend_training, :to => :quiz_submission
 
   def initialize(quiz_submission, ext_params)
     @quiz_submission = quiz_submission
@@ -70,6 +70,11 @@ class Quizzes::QuizExtension
     if !ext_params[:manually_unlocked].nil?
       unlocked = [1, "1", true, "true"].include?(ext_params[:manually_unlocked])
       quiz_submission.manually_unlocked = unlocked
+    end
+
+    if !ext_params[:did_not_attend_training].nil?
+      did_not_attend_training = [1, "1", true, "true"].include?(ext_params[:did_not_attend_training])
+      quiz_submission.did_not_attend_training = did_not_attend_training
     end
   end
 

@@ -35,6 +35,7 @@ module Api::V1::QuizSubmission
     extra_attempts
     extra_time
     manually_unlocked
+    did_not_attend_training
     started_at
     finished_at
     end_at

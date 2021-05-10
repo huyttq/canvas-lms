@@ -22,7 +22,7 @@ module Quizzes
     root :quiz_extension
 
     attributes :user_id, :quiz_id, :user_id, :extra_attempts, :extra_time,
-               :manually_unlocked, :end_at
+               :manually_unlocked, :end_at, :did_not_attend_training
   end
 end
 
