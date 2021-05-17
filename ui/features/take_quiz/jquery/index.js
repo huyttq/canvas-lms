@@ -37,7 +37,7 @@ import 'jqueryui/dialog'
 import '@canvas/rails-flash-notifications'
 import 'jquery-scroll-to-visible/jquery.scrollTo'
 import '@canvas/quizzes/jquery/behaviors/quiz_selectmenu'
-import  SignaturePad from 'signature_pad'
+import SignaturePad from 'signature_pad'
 
 RichContentEditor.preloadRemoteModule()
 
