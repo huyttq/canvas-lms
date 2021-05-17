@@ -204,6 +204,8 @@ class User < ActiveRecord::Base
     dependent: :destroy,
     inverse_of: :grader
 
+  has_many :comment_bank_items, -> { where("workflow_state<>'deleted'") }
+
   belongs_to :otp_communication_channel, :class_name => 'CommunicationChannel'
 
   belongs_to :merged_into_user, class_name: 'User'
@@ -600,9 +602,11 @@ class User < ActiveRecord::Base
         shard_user_ids = users.map(&:id)
 
         data[:enrollments] += shard_enrollments =
-            Enrollment.where("workflow_state<>'deleted' AND type<>'StudentViewEnrollment'").
+            Enrollment.where("workflow_state NOT IN ('deleted','completed','inactive','rejected') AND type<>'StudentViewEnrollment'").
                 where(:user_id => shard_user_ids).
                 select([:user_id, :course_id, :course_section_id]).
+                joins(:enrollment_state).
+                where.not(enrollment_states: {state: 'completed'}).
                 distinct.to_a
 
         # probably a lot of dups, so more efficient to use a set than uniq an array
@@ -1702,6 +1706,18 @@ class User < ActiveRecord::Base
 
   def default_notifications_disabled?
     !!preferences[:default_notifications_disabled]
+  end
+
+  def last_seen_release_note=(val)
+    preferences[:last_seen_release_note] = val
+  end
+
+  def last_seen_release_note
+    preferences[:last_seen_release_note] || Time.at(0)
+  end
+
+  def release_notes_badge_disabled?
+    !!preferences[:release_notes_badge_disabled]
   end
 
   # ***** OHI If you're going to add a lot of data into `preferences` here maybe take a look at app/models/user_preference_value.rb instead ***
@@ -2818,29 +2834,34 @@ class User < ActiveRecord::Base
       return :required if mfa_settings == :required ||
           mfa_settings == :required_for_admins && !pseudonym_hint.account.cached_all_account_users_for(self).empty?
     end
+    return :required if pseudonym_hint&.authentication_provider&.mfa_required?
 
-    result = self.pseudonyms.shard(self).preload(:account).map(&:account).uniq.map do |account|
+    pseudonyms = self.pseudonyms.shard(self).preload(:account, authentication_provider: :account)
+    return :required if pseudonyms.any? { |p| p.authentication_provider&.mfa_required? }
+
+    result = pseudonyms.map(&:account).uniq.map do |account|
       case account.mfa_settings
-        when :disabled
-          0
-        when :optional
+      when :disabled
+        0
+      when :optional
+        1
+      when :required_for_admins
+        # if pseudonym_hint is given, and we got to here, we don't need
+        # to redo the expensive all_account_users_for check
+        if (pseudonym_hint && pseudonym_hint.account == account) ||
+            account.cached_all_account_users_for(self).empty?
           1
-        when :required_for_admins
-          # if pseudonym_hint is given, and we got to here, we don't need
-          # to redo the expensive all_account_users_for check
-          if (pseudonym_hint && pseudonym_hint.account == account) ||
-              account.cached_all_account_users_for(self).empty?
-            1
-          else
-            # short circuit the entire method
-            return :required
-          end
-        when :required
+        else
           # short circuit the entire method
           return :required
+        end
+      when :required
+        # short circuit the entire method
+        return :required
       end
     end.max
     return :disabled if result.nil?
+
     [ :disabled, :optional ][result]
   end
 

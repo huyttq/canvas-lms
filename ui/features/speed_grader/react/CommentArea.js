@@ -16,7 +16,7 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, {useState} from 'react'
+import React, {useState, useRef} from 'react'
 import PropTypes from 'prop-types'
 import {TextArea} from '@instructure/ui-text-area'
 import {ScreenReaderContent} from '@instructure/ui-a11y-content'
@@ -31,16 +31,30 @@ const textAreaProps = {
   resize: 'vertical'
 }
 
-export default function CommentArea({getTextAreaRef, courseId}) {
+export default function CommentArea({getTextAreaRef, courseId, userId}) {
   const [comment, setComment] = useState('')
+  const textAreaRef = useRef()
   const showCommentLibrary = ENV.assignment_comment_library_feature_enabled
+
+  const setTextAreaRef = el => {
+    textAreaRef.current = el
+    getTextAreaRef(el)
+  }
+
   return (
     <>
-      {showCommentLibrary && <CommentLibrary setComment={setComment} courseId={courseId} />}
+      {showCommentLibrary && (
+        <CommentLibrary
+          textAreaRef={textAreaRef}
+          setComment={setComment}
+          courseId={courseId}
+          userId={userId}
+        />
+      )}
       <TextArea
         value={comment}
         onChange={e => setComment(e.target.value)}
-        textareaRef={ref => getTextAreaRef(ref)}
+        textareaRef={setTextAreaRef}
         {...textAreaProps}
       />
     </>
@@ -49,5 +63,6 @@ export default function CommentArea({getTextAreaRef, courseId}) {
 
 CommentArea.propTypes = {
   getTextAreaRef: PropTypes.func.isRequired,
-  courseId: PropTypes.string.isRequired
+  courseId: PropTypes.string.isRequired,
+  userId: PropTypes.string.isRequired
 }

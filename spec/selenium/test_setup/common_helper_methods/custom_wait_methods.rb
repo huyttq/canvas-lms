@@ -39,20 +39,38 @@ module CustomWaitMethods
 
   # If we're looking for the loading image, we can't just do a normal assertion, because the image
   # could end up getting loaded too quickly.
-  def wait_for_loading_image
+  def wait_for_transient_element(selector)
     driver.execute_script(<<-JS)
-      window.__WAIT_FOR_LOADING_IMAGE = false
+      window.__WAIT_FOR_LOADING_IMAGE = 0
       window.__WAIT_FOR_LOADING_IMAGE_CALLBACK = null
+
+      var _checkAddedNodes = function(addedNodes) {
+        for(var newNode of addedNodes) {
+          if(newNode.matches('#{selector}') || newNode.querySelector('#{selector}')) {
+            window.__WAIT_FOR_LOADING_IMAGE = 1
+          }
+        }
+      }
+
+      var _checkRemovedNodes = function(removedNodes) {
+        if(window.__WAIT_FOR_LOADING_IMAGE !== 1) {
+          return
+        }
+
+        for(var newNode of removedNodes) {
+          if(newNode.matches('#{selector}') || newNode.querySelector('#{selector}')) {
+            observer.disconnect()
+
+            window.__WAIT_FOR_LOADING_IMAGE = 2
+            window.__WAIT_FOR_LOADING_IMAGE_CALLBACK && window.__WAIT_FOR_LOADING_IMAGE_CALLBACK()
+          }
+        }
+      }
+
       var callback = function(mutationsList, observer) {
         for(var record of mutationsList) {
-          for(var newNode of record.addedNodes) {
-            if(newNode.classList.contains('loading_image_holder')) {
-              observer.disconnect()
-
-              window.__WAIT_FOR_LOADING_IMAGE = true
-              window.__WAIT_FOR_LOADING_IMAGE_CALLBACK && window.__WAIT_FOR_LOADING_IMAGE_CALLBACK()
-            }
-          }
+          _checkAddedNodes(record.addedNodes)
+          _checkRemovedNodes(record.removedNodes)
         }
       }
       var observer = new MutationObserver(callback)
@@ -63,18 +81,20 @@ module CustomWaitMethods
 
     result = driver.execute_async_script(<<-JS)
       var callback = arguments[arguments.length - 1]
-      if (window.__WAIT_FOR_LOADING_IMAGE) {
+      if (window.__WAIT_FOR_LOADING_IMAGE == 2) {
         callback(0)
       }
       window.__WAIT_FOR_LOADING_IMAGE_CALLBACK = function() {
         callback(0)
       }
     JS
-    raise "loading image did not appear" if result != 0
+    raise "element #{selector} did not appear or was not transient" if result != 0
   end
 
-  def wait_for_ajax_requests
-    result = driver.execute_async_script(<<-JS)
+  def wait_for_ajax_requests(bridge = nil)
+    bridge = driver if bridge.nil?
+
+    result = bridge.execute_async_script(<<-JS)
       var callback = arguments[arguments.length - 1];
       // see code in ui/boot/index.js for where
       // __CANVAS_IN_FLIGHT_XHR_REQUESTS__ and 'canvasXHRComplete' come from
@@ -104,11 +124,14 @@ module CustomWaitMethods
         window.addEventListener('canvasXHRComplete', onXHRCompleted)
       }
     JS
+    raise "ajax requests not completed" if result == -2
     result
   end
 
-  def wait_for_animations
-    driver.execute_async_script(<<-JS)
+  def wait_for_animations(bridge = nil)
+    bridge = driver if bridge.nil?
+
+    bridge.execute_async_script(<<-JS)
       var callback = arguments[arguments.length - 1];
       if (typeof($) == 'undefined') {
         callback(-1);
@@ -125,16 +148,21 @@ module CustomWaitMethods
     JS
   end
 
-  def wait_for_ajaximations
-    wait_for_ajax_requests
-    wait_for_animations
+  def wait_for_ajaximations(bridge = nil)
+    bridge = driver if bridge.nil?
+
+    wait_for_ajax_requests(bridge)
+    wait_for_animations(bridge)
   end
 
-  def wait_for_initializers
-    driver.execute_async_script <<~JS
+  def wait_for_initializers(bridge = nil)
+    bridge = driver if bridge.nil?
+
+    bridge.execute_async_script <<~JS
       var callback = arguments[arguments.length - 1];
 
-      if (window.canvasReadyState === 'complete') {
+      // If canvasReadyState isn't defined, we're likely in an IFrame (such as the RCE)
+      if (!window.canvasReadyState || window.canvasReadyState === 'complete') {
         callback()
       }
       else {

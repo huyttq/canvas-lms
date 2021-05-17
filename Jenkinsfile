@@ -19,6 +19,7 @@
  */
 def FILES_CHANGED_STAGE = 'Detect Files Changed'
 def JS_BUILD_IMAGE_STAGE = 'Javascript (Build Image)'
+def LINTERS_BUILD_IMAGE_STAGE = 'Linters (Build Image)'
 def RUN_MIGRATIONS_STAGE = 'Run Migrations'
 
 def buildParameters = [
@@ -258,12 +259,11 @@ pipeline {
     RUBY = configuration.ruby() // RUBY_VERSION is a reserved keyword for ruby installs
     RSPEC_PROCESSES = 4
 
-    LINTER_DEBUG_IMAGE = "${configuration.buildRegistryPath('linter-debug')}:${imageTagVersion()}-$TAG_SUFFIX"
-
     CASSANDRA_PREFIX = configuration.buildRegistryPath('cassandra-migrations')
     DYNAMODB_PREFIX = configuration.buildRegistryPath('dynamodb-migrations')
     KARMA_BUILDER_PREFIX = configuration.buildRegistryPath('karma-builder')
     KARMA_RUNNER_PREFIX = configuration.buildRegistryPath('karma-runner')
+    LINTERS_RUNNER_PREFIX = configuration.buildRegistryPath('linters-runner')
     POSTGRES_PREFIX = configuration.buildRegistryPath('postgres-migrations')
     RUBY_RUNNER_PREFIX = configuration.buildRegistryPath('ruby-runner')
     YARN_RUNNER_PREFIX = configuration.buildRegistryPath('yarn-runner')
@@ -282,6 +282,7 @@ pipeline {
     CASSANDRA_MERGE_IMAGE = "$CASSANDRA_PREFIX:$IMAGE_CACHE_MERGE_SCOPE-$RSPEC_PROCESSES"
     DYNAMODB_MERGE_IMAGE = "$DYNAMODB_PREFIX:$IMAGE_CACHE_MERGE_SCOPE-$RSPEC_PROCESSES"
     KARMA_RUNNER_IMAGE = "$KARMA_RUNNER_PREFIX:$IMAGE_CACHE_UNIQUE_SCOPE"
+    LINTERS_RUNNER_IMAGE = "$LINTERS_RUNNER_PREFIX:$IMAGE_CACHE_UNIQUE_SCOPE"
     POSTGRES_MERGE_IMAGE = "$POSTGRES_PREFIX:$IMAGE_CACHE_MERGE_SCOPE-$RSPEC_PROCESSES"
 
     // This is primarily for the plugin build
@@ -314,6 +315,10 @@ pipeline {
             error 'Manually triggering the change-merged build path must be combined with a custom build-registry-path'
             return
           }
+
+          reportToSplunk('is_kubernetes', [
+            'value': configuration.isKubernetesEnabled(),
+          ])
 
           maybeSlackSendRetrigger()
 
@@ -359,7 +364,7 @@ pipeline {
               buildParameters += string(name: 'CANVAS_LMS_REFSPEC', value: env.CANVAS_LMS_REFSPEC)
             }
 
-            extendedStage('Builder').nodeRequirements(label: 'canvas-docker', podTemplate: libraryResource('/pod_templates/docker_base.yml'), container: 'docker').obeysAllowStages(false).timings(false).queue(rootStages) {
+            extendedStage('Builder').nodeRequirements(label: 'canvas-docker', podTemplate: null).obeysAllowStages(false).timings(false).queue(rootStages) {
               // Use a nospot instance for now to avoid really bad UX. Jenkins currently will
               // wait for the current steps to complete (even wait to spin up a node), causing
               // extremely long wait times for a restart. Investigation in DE-166 / DE-158.
@@ -367,6 +372,12 @@ pipeline {
                 .obeysAllowStages(false)
                 .timeout(2)
                 .execute({ setupStage() })
+
+              extendedStage('Rebase')
+                .obeysAllowStages(false)
+                .required(!configuration.isChangeMerged() && env.GERRIT_PROJECT == 'canvas-lms')
+                .timeout(2)
+                .execute({ rebaseStage() })
 
               extendedStage(FILES_CHANGED_STAGE)
                 .obeysAllowStages(false)
@@ -388,12 +399,6 @@ pipeline {
                   distribution.stashBuildScripts()
                 }
 
-              extendedStage('Rebase')
-                .obeysAllowStages(false)
-                .required(!configuration.isChangeMerged() && env.GERRIT_PROJECT == 'canvas-lms')
-                .timeout(2)
-                .execute({ rebaseStage() })
-
               extendedStage('Build Docker Image (Pre-Merge)')
                 .obeysAllowStages(false)
                 .required(configuration.isChangeMerged())
@@ -413,34 +418,6 @@ pipeline {
               extendedStage('Parallel Run Tests').obeysAllowStages(false).execute { _, buildConfig ->
                 def stages = [:]
 
-                def linterHooks = [
-                  onNodeAcquired: lintersStage.&setupNode,
-                  onNodeReleasing: lintersStage.&tearDownNode,
-                ]
-
-                extendedStage('Linters')
-                  .hooks(linterHooks)
-                  .required(!configuration.isChangeMerged())
-                  .queue(stages, {
-                    def nestedStages = [:]
-
-                    extendedStage('Linters - Run Tests - Code').queue(nestedStages, lintersStage.&codeStage)
-                    extendedStage('Linters - Run Tests - Webpack').queue(nestedStages, lintersStage.&webpackStage)
-                    extendedStage('Linters - Run Tests - Yarn')
-                      .required(env.GERRIT_PROJECT == 'canvas-lms' && git.changedFiles(['package.json', 'yarn.lock'], 'HEAD^'))
-                      .queue(nestedStages, lintersStage.&yarnStage)
-
-                    parallel(nestedStages)
-                  })
-
-                extendedStage('Master Bouncer')
-                  .required(env.MASTER_BOUNCER_RUN == '1' && !configuration.isChangeMerged())
-                  .queue(stages) {
-                    credentials.withMasterBouncerCredentials {
-                      sh 'build/new-jenkins/linters/run-master-bouncer.sh'
-                    }
-                  }
-
                 extendedStage('Consumer Smoke Test').queue(stages) {
                   sh 'build/new-jenkins/consumer-smoke-test.sh'
                 }
@@ -448,9 +425,8 @@ pipeline {
                 extendedStage(JS_BUILD_IMAGE_STAGE)
                   .queue(stages, buildDockerImageStage.&jsImage)
 
-                extendedStage('Dependency Check')
-                  .required(configuration.isChangeMerged())
-                  .queue(stages, { dependencyCheckStage() })
+                extendedStage(LINTERS_BUILD_IMAGE_STAGE)
+                  .queue(stages, buildDockerImageStage.&lintersImage)
 
                 parallel(stages)
               }
@@ -494,6 +470,38 @@ pipeline {
               parallel(nestedStages)
             }
 
+            extendedStage('Linters (Waiting for Dependencies)').obeysAllowStages(false).waitsFor(LINTERS_BUILD_IMAGE_STAGE, 'Builder').queue(rootStages) {
+              extendedStage('Linters - Dependency Check')
+                .hooks([onNodeAcquired: lintersStage.&setupNode])
+                .nodeRequirements(label: 'canvas-docker', podTemplate: libraryResource('/pod_templates/docker_base.yml'), container: 'docker')
+                .required(configuration.isChangeMerged())
+                .execute(lintersStage.&dependencyCheckStage)
+
+              extendedStage('Linters')
+                .hooks([onNodeAcquired: lintersStage.&setupNode, onNodeReleasing: lintersStage.&tearDownNode])
+                .nodeRequirements(label: 'canvas-docker', podTemplate: libraryResource('/pod_templates/docker_base.yml'), container: 'docker')
+                .required(!configuration.isChangeMerged())
+                .execute {
+                  def nestedStages = [:]
+
+                  extendedStage('Linters - Code')
+                    .queue(nestedStages, lintersStage.&codeStage)
+
+                  extendedStage('Linters - Master Bouncer')
+                    .required(env.MASTER_BOUNCER_RUN == '1')
+                    .queue(nestedStages, lintersStage.&masterBouncerStage)
+
+                  extendedStage('Linters - Webpack')
+                    .queue(nestedStages, lintersStage.&webpackStage)
+
+                  extendedStage('Linters - Yarn')
+                    .required(env.GERRIT_PROJECT == 'canvas-lms' && git.changedFiles(['package.json', 'yarn.lock'], 'HEAD^'))
+                    .queue(nestedStages, lintersStage.&yarnStage)
+
+                  parallel(nestedStages)
+                }
+            }
+
             extendedStage("${RUN_MIGRATIONS_STAGE} (Waiting for Dependencies)").obeysAllowStages(false).waitsFor(RUN_MIGRATIONS_STAGE, 'Builder').queue(rootStages) { _, buildConfig ->
               def nestedStages = [:]
 
@@ -529,8 +537,8 @@ pipeline {
                   string(name: 'POSTGRES_IMAGE_TAG', value: "${env.POSTGRES_IMAGE_TAG}"),
                 ])
 
-              distribution.addRSpecSuites(nestedStages)
-              distribution.addSeleniumSuites(nestedStages)
+
+              rspecStage.createDistribution(nestedStages)
 
               parallel(nestedStages)
             }

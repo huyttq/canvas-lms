@@ -253,12 +253,11 @@ class Course < ActiveRecord::Base
   before_update :handle_syllabus_changes_for_master_migration
 
   before_save :touch_root_folder_if_necessary
-  before_save :hide_external_tool_tabs_if_necessary
   before_validation :verify_unique_ids
   validate :validate_course_dates
   validate :validate_course_image
   validate :validate_default_view
-  validate :validate_template, if: :template_changed?
+  validate :validate_template
   validates :sis_source_id, uniqueness: {scope: :root_account}, allow_nil: true
   validates_presence_of :account_id, :root_account_id, :enrollment_term_id, :workflow_state
   validates_length_of :syllabus_body, :maximum => maximum_long_text_length, :allow_nil => true, :allow_blank => true
@@ -487,6 +486,9 @@ class Course < ActiveRecord::Base
   end
 
   def validate_template
+    return unless self.class.columns_hash.key?('template')
+    return unless template_changed?
+
     if template? && !can_become_template?
       errors.add(:template, t("Courses with enrollments can't become templates"))
     elsif !template? && !can_stop_being_template?
@@ -819,6 +821,8 @@ class Course < ActiveRecord::Base
   scope :not_associated_courses, -> { joins("LEFT OUTER JOIN #{MasterCourses::ChildSubscription.quoted_table_name} AS mcs ON mcs.child_course_id=courses.id AND mcs.workflow_state<>'deleted'").where("mcs IS NULL") }
 
   scope :templates, -> { where(template: true) }
+
+  scope :sync_homeroom_enrollments_enabled, -> { where('settings LIKE ?', '%sync_enrollments_from_homeroom: true%') }
 
   def potential_collaborators
     current_users
@@ -2555,7 +2559,7 @@ class Course < ActiveRecord::Base
       :organize_epub_by_content_type, :show_announcements_on_home_page,
       :home_page_announcement_limit, :enable_offline_web_export, :usage_rights_required,
       :restrict_student_future_view, :restrict_student_past_view, :restrict_enrollments_to_course_dates,
-      :homeroom_course, :course_color
+      :homeroom_course, :course_color, :sync_enrollments_from_homeroom, :homeroom_course_id
     ]
   end
 
@@ -2935,6 +2939,9 @@ class Course < ActiveRecord::Base
   def self.default_homeroom_tabs
     default_tabs = Course.default_tabs
     homeroom_tabs = [default_tabs.find {|tab| tab[:id] == TAB_ANNOUNCEMENTS}]
+    syllabus_tab = default_tabs.find {|tab| tab[:id] == TAB_SYLLABUS}
+    syllabus_tab[:label] = t("Important Info")
+    homeroom_tabs << syllabus_tab
     homeroom_tabs << default_tabs.find {|tab| tab[:id] == TAB_PEOPLE}
     homeroom_tabs << default_tabs.find {|tab| tab[:id] == TAB_SETTINGS}
     homeroom_tabs.compact
@@ -2943,13 +2950,21 @@ class Course < ActiveRecord::Base
   def self.course_subject_tabs
     course_tabs = Course.default_tabs.select { |tab| COURSE_SUBJECT_TAB_IDS.include?(tab[:id]) }
     # Add the unique TAB_SCHEDULE
-    course_tabs << {
+    course_tabs.insert(1, {
       :id => TAB_SCHEDULE,
       :label => t('#tabs.schedule', "Schedule"),
       :css_class => 'schedule',
       :href => :course_path
-    }
+    })
     course_tabs.sort_by { |tab| COURSE_SUBJECT_TAB_IDS.index tab[:id] }
+  end
+
+  def self.elementary_course_nav_tabs
+    Course.default_tabs.reject { |tab| tab[:id] == TAB_HOME }
+  end
+
+  def tab_enabled?(tab)
+    elementary_subject_course? || tab[:id] != TAB_HOME
   end
 
   def tab_hidden?(id)
@@ -2958,32 +2973,10 @@ class Course < ActiveRecord::Base
   end
 
   def external_tool_tabs(opts, user)
-    tools = external_tools_for_tabs.select { |t| t.permission_given?(:course_navigation, user, self) && t.feature_flag_enabled?(self) }
+    tools = self.context_external_tools.active.having_setting('course_navigation')
+    tools += ContextExternalTool.active.having_setting('course_navigation').where(context_type: 'Account', context_id: account_chain_ids).to_a
+    tools = tools.select { |t| t.permission_given?(:course_navigation, user, self) && t.feature_flag_enabled?(self) }
     Lti::ExternalToolTab.new(self, :course_navigation, tools, opts[:language]).tabs
-  end
-
-  def external_tools_for_tabs
-    self.context_external_tools.active.having_setting('course_navigation') +
-      ContextExternalTool.active.having_setting('course_navigation').where(
-        context_type: 'Account', context_id: account_chain_ids
-      ).to_a
-  end
-
-  def hide_external_tool_tabs_if_necessary
-    return true unless tab_configuration_changed?
-
-    tabs_by_id = tab_configuration.each_with_object({}) { |tab,memo| memo[tab['id']] = tab}
-    external_tools_for_tabs.each do |tool|
-      next unless tabs_by_id[tool.asset_string]
-
-      if tabs_by_id[tool.asset_string]['hidden']
-        tool.override_visibility('admins', :course_navigation)
-      else
-        tool.clear_visibility_override(:course_navigation)
-      end
-      tool.save!
-    end
-    true
   end
 
   def tabs_available(user=nil, opts={})
@@ -2997,11 +2990,13 @@ class Course < ActiveRecord::Base
     # make sure t() is called before we switch to the secondary, in case we update the user's selected locale in the process
     # The request params are nested within the session variable. Here we attempt to dig deep and find the params we
     # care about to display elementary course subject tabs
-    course_subject_tabs = elementary_subject_course? && opts&.dig(:session)&.instance_variable_get(:@req)&.params&.dig(:include)&.include?('course_subject_tabs')
+    course_subject_tabs = elementary_subject_course? && opts[:course_subject_tabs]
     default_tabs = if elementary_homeroom_course?
                      Course.default_homeroom_tabs
                    elsif course_subject_tabs
                      Course.course_subject_tabs
+                   elsif elementary_subject_course?
+                     Course.elementary_course_nav_tabs
                    else
                      Course.default_tabs
                    end
@@ -3011,8 +3006,9 @@ class Course < ActiveRecord::Base
 
     GuardRail.activate(:secondary) do
       # We will by default show everything in default_tabs, unless the teacher has configured otherwise.
-      tabs = self.tab_configuration.compact
-      settings_tab = default_tabs[-1]
+      tabs = elementary_subject_course? && !course_subject_tabs ? [] : self.tab_configuration.compact
+      home_tab = default_tabs.find {|t| t[:id] == TAB_HOME}
+      settings_tab = default_tabs.find {|t| t[:id] == TAB_SETTINGS}
       external_tabs = if opts[:include_external]
                         external_tool_tabs(opts, user) + Lti::MessageHandler.lti_apps_tabs(self, [Lti::ResourcePlacement::COURSE_NAVIGATION], opts)
                       else
@@ -3035,12 +3031,28 @@ class Course < ActiveRecord::Base
         end
       end
       tabs.compact!
+
+      if course_subject_tabs
+        # If we didn't have a saved position for Schedule, insert it in the 2nd position
+        schedule_tab = default_tabs.detect { |t| t[:id] == TAB_SCHEDULE }
+        tabs.insert(1, default_tabs.delete(schedule_tab)) if schedule_tab && !tabs.empty?
+      end
       tabs += default_tabs
       tabs += external_tabs
 
-      # Ensure that Settings is always at the bottom
       tabs.delete_if {|t| t[:id] == TAB_SETTINGS }
-      tabs << settings_tab unless course_subject_tabs
+      if course_subject_tabs
+        # Don't show Settings, ensure that all external tools are at the bottom
+        lti_tabs = tabs.filter { |t| t[:external] }
+        tabs -= lti_tabs
+        tabs += lti_tabs
+      else
+        # Ensure that Settings is always at the bottom
+        tabs << settings_tab if settings_tab
+        # Ensure that Home is always at the top
+        tabs.delete_if {|t| t[:id] == TAB_HOME}
+        tabs.unshift home_tab if home_tab
+      end
 
       if opts[:only_check]
         tabs = tabs.select { |t| opts[:only_check].include?(t[:id]) }
@@ -3268,6 +3280,8 @@ class Course < ActiveRecord::Base
   add_setting :usage_rights_required, :boolean => true, :default => false, :inherited => true
 
   add_setting :homeroom_course, :boolean => true, :default => false
+  add_setting :sync_enrollments_from_homeroom, :boolean => true, :default => false
+  add_setting :homeroom_course_id
   add_setting :course_color
 
   def elementary_enabled?
@@ -3284,6 +3298,25 @@ class Course < ActiveRecord::Base
 
   def lock_all_announcements?
     !!lock_all_announcements || elementary_homeroom_course?
+  end
+
+  def self.sync_homeroom_enrollments
+    sync_homeroom_enrollments_enabled.find_each(&:sync_homeroom_enrollments)
+  end
+
+  def sync_homeroom_enrollments(progress=nil)
+    return false unless elementary_subject_course? && sync_enrollments_from_homeroom && homeroom_course_id.present?
+
+    homeroom_course = account.courses.find_by(id: homeroom_course_id)
+    return false if homeroom_course.nil?
+
+    progress&.calculate_completion!(0, homeroom_course.enrollments.size)
+    homeroom_course.all_enrollments.find_each do |enrollment|
+      course_enrollment = all_enrollments.find_or_initialize_by(type: enrollment.type, user_id: enrollment.user_id)
+      course_enrollment.workflow_state = enrollment.workflow_state
+      course_enrollment.save!
+      progress.increment_completion!(1) if progress&.total
+    end
   end
 
   def user_can_manage_own_discussion_posts?(user)
@@ -3814,10 +3847,6 @@ class Course < ActiveRecord::Base
 
   def can_stop_being_template?
     !templated_accounts.exists?
-  end
-
-  def comment_bank_items_visible_to(user)
-    comment_bank_items.active.where(user: user)
   end
 
   private

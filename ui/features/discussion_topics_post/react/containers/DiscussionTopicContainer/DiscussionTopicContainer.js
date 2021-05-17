@@ -36,6 +36,7 @@ import {
 } from '../../../graphql/Mutations'
 import PropTypes from 'prop-types'
 import React, {useContext, useState} from 'react'
+import {SearchContext} from '../../utils/constants'
 import {useMutation} from 'react-apollo'
 import {isGraded, getSpeedGraderUrl, getEditUrl} from '../../utils'
 import {View} from '@instructure/ui-view'
@@ -45,6 +46,8 @@ export const DiscussionTopicContainer = ({createDiscussionEntry, ...props}) => {
   const [sendToOpen, setSendToOpen] = useState(false)
   const [copyToOpen, setCopyToOpen] = useState(false)
   const [expandedReply, setExpandedReply] = useState(false)
+
+  const {setSearchTerm} = useContext(SearchContext)
 
   const discussionTopicData = {
     _id: props.discussionTopic._id,
@@ -62,12 +65,18 @@ export const DiscussionTopicContainer = ({createDiscussionEntry, ...props}) => {
   }
 
   // TODO: Change this to the new canGrade permission.
-  const canGrade =
-    (isGraded(discussionTopicData.assignment) && discussionTopicData?.permissions?.update) || false
+  const canGrade = discussionTopicData?.permissions?.speedGrader || false
   const canDelete = discussionTopicData?.permissions?.delete || false
-  const canReadAsAdmin = !!discussionTopicData?.permissions?.readAsAdmin || false
+  const canReply = discussionTopicData?.permissions?.reply
   const canUpdate = discussionTopicData?.permissions?.update || false
-  const canUnpublish = props.discussionTopic.canUnpublish || false
+  const canPeerReview = discussionTopicData?.permissions?.peerReview
+  const canShowRubric = discussionTopicData?.permissions?.showRubric
+  const canAddRubric = discussionTopicData?.permissions?.addRubric
+  const canOpenForComments = discussionTopicData?.permissions?.openForComments
+  const canCloseForComments = discussionTopicData?.permissions?.closeForComments
+  const canCopyAndSendTo = discussionTopicData?.permissions?.copyAndSendTo
+  const canModerate = discussionTopicData?.permissions?.moderateForum
+  const canUnpublish = props.discussionTopic.canUnpublish
 
   if (isGraded(discussionTopicData.assignment)) {
     discussionTopicData.dueAt = DateHelper.formatDatetimeForDiscussions(
@@ -164,6 +173,10 @@ export const DiscussionTopicContainer = ({createDiscussionEntry, ...props}) => {
     })
   }
 
+  const onSearchChange = value => {
+    setSearchTerm(value)
+  }
+
   return (
     <>
       <div style={{position: 'sticky', top: 0, zIndex: 10, marginTop: '-24px'}}>
@@ -172,7 +185,7 @@ export const DiscussionTopicContainer = ({createDiscussionEntry, ...props}) => {
             selectedView="all"
             sortDirection="asc"
             isCollapsedReplies
-            onSearchChange={() => {}}
+            onSearchChange={onSearchChange}
             onViewFilter={() => {}}
             onSortClick={() => {}}
             onCollapseRepliesToggle={() => {}}
@@ -212,22 +225,24 @@ export const DiscussionTopicContainer = ({createDiscussionEntry, ...props}) => {
                       avatarUrl={discussionTopicData.avatarUrl}
                       pillText={I18n.t('Author')}
                       timingDisplay={discussionTopicData.postedAt}
+                      title={discussionTopicData.title}
                       message={discussionTopicData.message}
                     >
-                      <Button
-                        color="primary"
-                        onClick={() => {
-                          setExpandedReply(!expandedReply)
-                        }}
-                        data-testid="discussion-topic-reply"
-                      >
-                        {I18n.t('Reply')}
-                      </Button>
+                      {canReply && (
+                        <Button
+                          color="primary"
+                          onClick={() => {
+                            setExpandedReply(!expandedReply)
+                          }}
+                          data-testid="discussion-topic-reply"
+                        >
+                          {I18n.t('Reply')}
+                        </Button>
+                      )}
                     </PostMessage>
                   </Flex.Item>
                   <Flex.Item>
                     <PostToolbar
-                      onToggleComments={canReadAsAdmin ? () => {} : null}
                       onDelete={
                         canDelete
                           ? () => {
@@ -249,21 +264,21 @@ export const DiscussionTopicContainer = ({createDiscussionEntry, ...props}) => {
                       repliesCount={discussionTopicData.replies}
                       unreadCount={discussionTopicData.unread}
                       onSend={
-                        canReadAsAdmin
+                        canCopyAndSendTo
                           ? () => {
                               setSendToOpen(true)
                             }
                           : null
                       }
                       onCopy={
-                        canReadAsAdmin
+                        canCopyAndSendTo
                           ? () => {
                               setCopyToOpen(true)
                             }
                           : null
                       }
                       onEdit={
-                        canReadAsAdmin
+                        canUpdate
                           ? () => {
                               window.location.assign(
                                 getEditUrl(ENV.course_id, discussionTopicData._id)
@@ -271,7 +286,7 @@ export const DiscussionTopicContainer = ({createDiscussionEntry, ...props}) => {
                             }
                           : null
                       }
-                      onTogglePublish={canReadAsAdmin && canUpdate ? onPublish : null}
+                      onTogglePublish={canModerate ? onPublish : null}
                       onToggleSubscription={onSubscribe}
                       onOpenSpeedgrader={
                         canGrade
@@ -282,10 +297,14 @@ export const DiscussionTopicContainer = ({createDiscussionEntry, ...props}) => {
                             }
                           : null
                       }
+                      onPeerReviews={canPeerReview ? () => {} : null}
+                      onShowRubric={canShowRubric ? () => {} : null}
+                      onAddRubric={canAddRubric ? () => {} : null}
                       isPublished={discussionTopicData.published}
                       canUnpublish={canUnpublish}
                       isSubscribed={discussionTopicData.subscribed}
-                      commentsEnabled
+                      onOpenForComments={canOpenForComments ? () => {} : null}
+                      onCloseForComments={canCloseForComments ? () => {} : null}
                     />
                   </Flex.Item>
                 </Flex>

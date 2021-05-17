@@ -16,8 +16,8 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, {useEffect} from 'react'
-import PropTypes from 'prop-types'
+import React, {useEffect, useState} from 'react'
+import PropTypes, {shape, instanceOf} from 'prop-types'
 import {useQuery, useMutation} from 'react-apollo'
 import {showFlashAlert} from '@canvas/alerts/react/FlashAlert'
 import {View} from '@instructure/ui-view'
@@ -27,19 +27,19 @@ import {COMMENTS_QUERY} from './graphql/Queries'
 import I18n from 'i18n!CommentLibrary'
 import Library from './Library'
 
-const LibraryManager = ({setComment, courseId}) => {
+const LibraryManager = ({setComment, courseId, textAreaRef, userId}) => {
+  const [removedItemIndex, setRemovedItemIndex] = useState(null)
   const {loading, error, data} = useQuery(COMMENTS_QUERY, {
-    variables: {courseId}
+    variables: {userId}
   })
 
   useEffect(() => {
-    if (!error) {
-      return
+    if (error) {
+      showFlashAlert({
+        message: I18n.t('Error loading comment library'),
+        type: 'error'
+      })
     }
-    showFlashAlert({
-      message: I18n.t('Error loading comment library'),
-      type: 'error'
-    })
   }, [error])
 
   const getCachedComments = cache => {
@@ -47,7 +47,7 @@ const LibraryManager = ({setComment, courseId}) => {
       JSON.stringify(
         cache.readQuery({
           query: COMMENTS_QUERY,
-          variables: {courseId}
+          variables: {userId}
         })
       )
     )
@@ -56,7 +56,7 @@ const LibraryManager = ({setComment, courseId}) => {
   const writeComments = (cache, comments) => {
     cache.writeQuery({
       query: COMMENTS_QUERY,
-      variables: {courseId},
+      variables: {userId},
       data: comments
     })
   }
@@ -64,23 +64,27 @@ const LibraryManager = ({setComment, courseId}) => {
   const removeDeletedCommentFromCache = (cache, result) => {
     const commentsFromCache = getCachedComments(cache)
     const resultId = result.data.deleteCommentBankItem.commentBankItemId
-    const updatedComments = commentsFromCache.course.commentBankItemsConnection.nodes.filter(
-      comment => comment._id !== resultId
+    const removedIndex = commentsFromCache.legacyNode.commentBankItemsConnection.nodes.findIndex(
+      comment => comment._id === resultId
+    )
+    const updatedComments = commentsFromCache.legacyNode.commentBankItemsConnection.nodes.filter(
+      (_comment, index) => index !== removedIndex
     )
 
-    commentsFromCache.course.commentBankItemsConnection.nodes = updatedComments
+    commentsFromCache.legacyNode.commentBankItemsConnection.nodes = updatedComments
     writeComments(cache, commentsFromCache)
+    setRemovedItemIndex(removedIndex)
   }
 
   const addCommentToCache = (cache, result) => {
     const commentsFromCache = getCachedComments(cache)
     const newComment = result.data.createCommentBankItem.commentBankItem
     const updatedComments = [
-      ...commentsFromCache.course.commentBankItemsConnection.nodes,
+      ...commentsFromCache.legacyNode.commentBankItemsConnection.nodes,
       newComment
     ]
 
-    commentsFromCache.course.commentBankItemsConnection.nodes = updatedComments
+    commentsFromCache.legacyNode.commentBankItemsConnection.nodes = updatedComments
     writeComments(cache, commentsFromCache)
   }
 
@@ -132,21 +136,30 @@ const LibraryManager = ({setComment, courseId}) => {
     return null
   }
 
+  const handleSetComment = comment => {
+    setComment(comment)
+    textAreaRef.current.focus()
+  }
+
   return (
     <Library
-      comments={data?.course?.commentBankItemsConnection?.nodes || []}
-      setComment={setComment}
+      comments={data?.legacyNode?.commentBankItemsConnection?.nodes || []}
+      setComment={handleSetComment}
       onAddComment={handleAddComment}
       onDeleteComment={id => deleteComment({variables: {id}})}
       isAddingComment={isAddingComment}
-      courseId={courseId}
+      removedItemIndex={removedItemIndex}
     />
   )
 }
 
 LibraryManager.propTypes = {
   setComment: PropTypes.func.isRequired,
-  courseId: PropTypes.string.isRequired
+  courseId: PropTypes.string.isRequired,
+  textAreaRef: shape({
+    current: instanceOf(Element)
+  }).isRequired,
+  userId: PropTypes.string.isRequired
 }
 
 export default LibraryManager

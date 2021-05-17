@@ -192,12 +192,6 @@ describe ExternalToolsController do
           get :show, params: {:course_id => @course.id, id: tool.id}
           expect(cached_launch["https://purl.imsglobal.org/spec/lti/claim/roles"]).to include("http://purl.imsglobal.org/vocab/lti/system/person#TestUser")
         end
-
-        it 'API request returns unauthorized' do
-          allow(controller).to receive(:api_request?).and_return(true)
-          get :show, params: {:course_id => @course.id, id: tool.id}
-          expect(response).to be_unauthorized
-        end
       end
     end
 
@@ -869,16 +863,6 @@ describe ExternalToolsController do
       user_model
       user_session(@user)
       get 'retrieve', params: {:course_id => @course.id}
-      assert_unauthorized
-    end
-
-    it 'should restrict students from launching tools with limited visibility' do
-      user_session(@student)
-      tool = @course.context_external_tools.new(name: "bob", consumer_key: "bob", shared_secret: "bob")
-      tool.url = "http://www.example.com/basic_lti"
-      tool.course_navigation = { visibility: 'admins'}
-      tool.save!
-      get 'retrieve', params: {course_id: @course.id, url: "http://www.example.com/basic_lti", placement: 'course_navigation'}
       assert_unauthorized
     end
 
@@ -2357,6 +2341,55 @@ describe ExternalToolsController do
       expect(response).to be_successful
       tools = json_parse(response.body)
       expect(tools.count).to eq 0
+    end
+
+    context "with configured navigation settings" do
+      before :once do
+        @tool1 = add_tool("Test nav tool 1")
+        @tool1.course_navigation = {enabled: true}
+        @tool1.save!
+        @tool2 = add_tool("Test nav tool 2")
+        @tool2.course_navigation = {enabled: true}
+        @tool2.save!
+        @tool3 = add_tool("Test nav tool 3")
+        @tool3.course_navigation = {enabled: true}
+        @tool3.save!
+      end
+
+      it "returns tools in the order they are configured in the navigation settings" do
+        saved_tabs = [
+          {id: "context_external_tool_#{@tool3.id}"},
+          {id: "context_external_tool_#{@tool1.id}"},
+          {id: "context_external_tool_#{@tool2.id}"}
+        ]
+        @course.tab_configuration = saved_tabs
+        @course.save!
+        user_session(@teacher)
+        get :visible_course_nav_tools, params: {:course_id => @course.id}
+
+        tools = json_parse(response.body)
+        expect(tools.count).to eq 3
+        expect(tools[0]['name']).to eq "Test nav tool 3"
+        expect(tools[1]['name']).to eq "Test nav tool 1"
+        expect(tools[2]['name']).to eq "Test nav tool 2"
+      end
+
+      it "excludes hidden tools from response for students" do
+        saved_tabs = [
+          {id: "context_external_tool_#{@tool3.id}"},
+          {id: "context_external_tool_#{@tool1.id}", hidden: true},
+        ]
+        @course.tab_configuration = saved_tabs
+        @course.save!
+        student_in_course(:course => @course)
+        user_session(@student)
+        get :visible_course_nav_tools, params: {:course_id => @course.id}
+
+        tools = json_parse(response.body)
+        expect(tools.count).to eq 2
+        expect(tools[0]['name']).to eq "Test nav tool 3"
+        expect(tools[1]['name']).to eq "Test nav tool 2"
+      end
     end
   end
 end

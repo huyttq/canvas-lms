@@ -730,6 +730,11 @@ describe CoursesController do
       )
     end
 
+    it 'sets MSFT enabled in the JS ENV' do
+      subject
+      expect(controller.js_env[:MSFT_SYNC_ENABLED]).to eq false
+    end
+
     it 'sets the external tools create url' do
       user_session(@teacher)
       get 'settings', params: {:course_id => @course.id}
@@ -1622,6 +1627,14 @@ describe CoursesController do
         bundle = assigns[:js_bundles].select { |b| b.include? :announcements }
         expect(bundle.size).to eq 1
       end
+    end
+
+    it 'sets COURSE.student_outcome_gradebook_enabled when feature is on' do
+      @course.enable_feature!(:student_outcome_gradebook)
+      user_session(@student)
+
+      get 'show', params: {:id => @course.id}
+      expect(assigns[:js_env][:COURSE][:student_outcome_gradebook_enabled]).to be_truthy
     end
   end
 
@@ -3190,14 +3203,20 @@ describe CoursesController do
       submission = test_student.submissions.first
       auditor_rec = submission.auditor_grade_change_records.first
       expect(auditor_rec).to_not be_nil
-      OriginalityReport.create!(attachment: attachment_model, originality_score: '1', submission: test_student.submissions.first)
+      attachment = attachment_model
+      OriginalityReport.create!(attachment: attachment, originality_score: '1', submission: test_student.submissions.first)
+      submission.canvadocs_annotation_contexts.create!(
+        root_account: @course.root_account,
+        attachment: attachment,
+        launch_id: '1234'
+      )
       delete 'reset_test_student', params: {course_id: @course.id}
       test_student.reload
       expect(test_student.submissions.size).to be_zero
       expect(Auditors::ActiveRecord::GradeChangeRecord.where(id: auditor_rec.id).count).to be_zero
     end
 
-    it "removes provisional grades for by the test student" do
+    it "removes provisional grades for the test student" do
       user_session(@teacher)
       post 'student_view', params: {course_id: @course.id}
       test_student = @course.student_view_student

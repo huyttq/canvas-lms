@@ -117,11 +117,13 @@ export const GROUP_DETAIL_QUERY = gql`
   }
 `
 
-export const GROUP_DETAIL_QUERY_WITH_IMPORTED_OUTCOMES = gql`
-  query GroupDetailQuery(
+export const FIND_GROUP_OUTCOMES = gql`
+  query GroupDetailWithSearchQuery(
     $id: ID!
-    $outcomeIsImportedContextType: String!
-    $outcomeIsImportedContextId: ID!
+    $outcomesContextId: ID!
+    $outcomesContextType: String!
+    $outcomeIsImported: Boolean!
+    $searchQuery: String
     $outcomesCursor: String
   ) {
     group: legacyNode(type: LearningOutcomeGroup, _id: $id) {
@@ -129,22 +131,25 @@ export const GROUP_DETAIL_QUERY_WITH_IMPORTED_OUTCOMES = gql`
         _id
         description
         title
-        outcomesCount
-        outcomes(first: 10, after: $outcomesCursor) {
+        outcomesCount(searchQuery: $searchQuery)
+        canEdit
+        outcomes(searchQuery: $searchQuery, first: 10, after: $outcomesCursor) {
           pageInfo {
             hasNextPage
             endCursor
           }
-          nodes {
-            ... on LearningOutcome {
-              _id
-              description
-              title
-              displayName
-              isImported(
-                targetContextType: $outcomeIsImportedContextType
-                targetContextId: $outcomeIsImportedContextId
-              )
+          edges {
+            node {
+              ... on LearningOutcome {
+                _id
+                description
+                title
+                displayName
+                isImported(
+                  targetContextType: $outcomesContextType
+                  targetContextId: $outcomesContextId
+                ) @include(if: $outcomeIsImported)
+              }
             }
           }
         }
@@ -158,6 +163,23 @@ export const SET_OUTCOME_FRIENDLY_DESCRIPTION_MUTATION = gql`
     setFriendlyDescription(input: $input) {
       outcomeFriendlyDescription {
         _id
+        description
+      }
+      errors {
+        attribute
+        message
+      }
+    }
+  }
+`
+
+export const UPDATE_LEARNING_OUTCOME = gql`
+  mutation UpdateLearningOutcome($input: UpdateLearningOutcomeInput!) {
+    updateLearningOutcome(input: $input) {
+      learningOutcome {
+        _id
+        title
+        displayName
         description
       }
       errors {
@@ -186,9 +208,6 @@ export const removeOutcome = (contextType, contextId, groupId, outcomeId) =>
     ).toLowerCase()}/${contextId}/outcome_groups/${groupId}/outcomes/${outcomeId}`
   )
 
-export const updateOutcome = (outcomeId, outcome) =>
-  axios.put(`/api/v1/outcomes/${outcomeId}`, outcome)
-
 export const moveOutcomeGroup = (contextType, contextId, groupId, newParentGroupId) =>
   axios.put(
     `/api/v1/${pluralize(contextType).toLowerCase()}/${contextId}/outcome_groups/${groupId}`,
@@ -211,3 +230,17 @@ export const addOutcomeGroup = (contextType, contextId, parentGroupId, title) =>
     {title}
   )
 }
+
+export const moveOutcome = (
+  contextType,
+  contextId,
+  outcomeId,
+  oldParentGroupId,
+  newParentGroupId
+) =>
+  axios.put(
+    `/api/v1/${pluralize(
+      contextType
+    ).toLowerCase()}/${contextId}/outcome_groups/${newParentGroupId}/outcomes/${outcomeId}`,
+    {move_from: oldParentGroupId}
+  )

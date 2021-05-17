@@ -21,7 +21,8 @@ import {ApolloProvider} from 'react-apollo'
 import {DiscussionTopicContainer} from '../DiscussionTopicContainer'
 import {fireEvent, render} from '@testing-library/react'
 import {getEditUrl, getSpeedGraderUrl} from '../../../utils'
-import {handlers} from '../../../../graphql/mswHandlers'
+import {graphql} from 'msw'
+import {handlers, defaultTopic} from '../../../../graphql/mswHandlers'
 import {mswClient} from '../../../../../../shared/msw/mswClient'
 import {mswServer} from '../../../../../../shared/msw/mswServer'
 import React from 'react'
@@ -53,9 +54,10 @@ const discussionTopicMock = {
       pointsPossible: 5
     },
     permissions: {
-      readAsAdmin: true,
       update: true,
-      delete: true
+      delete: true,
+      speedGrader: true,
+      moderateForum: true
     }
   }
 }
@@ -156,20 +158,7 @@ describe('DiscussionTopicContainer', () => {
     expect(gradedDiscussionInfo).toHaveTextContent('This is a graded discussion: 5 points possible')
   })
 
-  it('renders teacher components when can readAsAdmin', async () => {
-    const {getByText, findByText} = setup(discussionTopicMock)
-
-    const manageButton = getByText('Manage Discussion').closest('button')
-    fireEvent.click(manageButton)
-
-    expect(await findByText('Edit')).toBeTruthy()
-    expect(await findByText('Delete')).toBeTruthy()
-    expect(await findByText('Close for Comments')).toBeTruthy()
-    expect(await findByText('Send To...')).toBeTruthy()
-    expect(await findByText('Copy To...')).toBeTruthy()
-  })
-
-  it('should be able to send to edit page when canReadAsAdmin', async () => {
+  it('should be able to send to edit page when canUpdate', async () => {
     const {getByTestId} = setup(discussionTopicMock)
     fireEvent.click(getByTestId('discussion-post-menu-trigger'))
     fireEvent.click(getByTestId('edit'))
@@ -210,17 +199,77 @@ describe('DiscussionTopicContainer', () => {
     })
   })
 
-  it('Should not be able to open SpeedGrader if is not an assignment', () => {
+  it('Should not be able to open SpeedGrader if the user does not have permission', () => {
     const {getByTestId, queryByTestId} = setup({
-      discussionTopic: {...discussionTopicMock.discussionTopic, assignment: null}
+      discussionTopic: {...discussionTopicMock.discussionTopic, permissions: {speedGrader: false}}
     })
 
     fireEvent.click(getByTestId('discussion-post-menu-trigger'))
     expect(queryByTestId('speedGrader')).toBeNull()
   })
 
+  it('Renders Add Rubric in the kabob menu if the user has permission', () => {
+    const {getByTestId, getByText} = setup({
+      discussionTopic: {...discussionTopicMock.discussionTopic, permissions: {addRubric: true}}
+    })
+
+    fireEvent.click(getByTestId('discussion-post-menu-trigger'))
+    expect(getByText('Add Rubric')).toBeInTheDocument()
+  })
+
+  it('Renders Show Rubric in the kabob menu if the user has permission', () => {
+    const {getByTestId, getByText} = setup({
+      discussionTopic: {...discussionTopicMock.discussionTopic, permissions: {showRubric: true}}
+    })
+
+    fireEvent.click(getByTestId('discussion-post-menu-trigger'))
+    expect(getByText('Show Rubric')).toBeInTheDocument()
+  })
+
+  it('Renders Open for Comments in the kabob menu if the user has permission', () => {
+    const {getByTestId, getByText} = setup({
+      discussionTopic: {
+        ...discussionTopicMock.discussionTopic,
+        permissions: {openForComments: true}
+      }
+    })
+
+    fireEvent.click(getByTestId('discussion-post-menu-trigger'))
+    expect(getByText('Open for Comments')).toBeInTheDocument()
+  })
+
+  it('Renders Close for Comments in the kabob menu if the user has permission', () => {
+    const {getByTestId, getByText} = setup({
+      discussionTopic: {
+        ...discussionTopicMock.discussionTopic,
+        permissions: {closeForComments: true}
+      }
+    })
+
+    fireEvent.click(getByTestId('discussion-post-menu-trigger'))
+    expect(getByText('Close for Comments')).toBeInTheDocument()
+  })
+
+  it('Renders Copy To and Send To in the kabob menu if the user has permission', () => {
+    const {getByTestId, getByText} = setup({
+      discussionTopic: {
+        ...discussionTopicMock.discussionTopic,
+        permissions: {copyAndSendTo: true}
+      }
+    })
+
+    fireEvent.click(getByTestId('discussion-post-menu-trigger'))
+    expect(getByText('Copy To...')).toBeInTheDocument()
+    expect(getByText('Send To...')).toBeInTheDocument()
+  })
+
   it('renders a modal to send content', async () => {
-    const container = setup(discussionTopicMock)
+    const container = setup({
+      discussionTopic: {
+        ...discussionTopicMock.discussionTopic,
+        permissions: {copyAndSendTo: true}
+      }
+    })
     const kebob = await container.findByTestId('discussion-post-menu-trigger')
     fireEvent.click(kebob)
     const sendToButton = await container.findByText('Send To...')
@@ -228,12 +277,46 @@ describe('DiscussionTopicContainer', () => {
     expect(await container.findByText('Send to:')).toBeTruthy()
   })
 
+  // eslint-disable-next-line jest/no-disabled-tests
   it.skip('renders a modal to copy content', async () => {
-    const container = setup(discussionTopicMock)
+    const container = setup({
+      discussionTopic: {
+        ...discussionTopicMock.discussionTopic,
+        permissions: {copyAndSendTo: true}
+      }
+    })
     const kebob = await container.findByTestId('discussion-post-menu-trigger')
     fireEvent.click(kebob)
     const copyToButton = await container.findByText('Copy To...')
     fireEvent.click(copyToButton)
     expect(await container.findByText('Select a Course')).toBeTruthy()
+  })
+
+  it('renders a reply button if user has reply permission true', async () => {
+    const container = setup({discussionTopic: {...defaultTopic}})
+    await waitFor(() =>
+      expect(container.getByText('This is a Discussion Topic Message')).toBeInTheDocument()
+    )
+    expect(await container.findByTestId('discussion-topic-reply')).toBeInTheDocument()
+  })
+
+  it('does not render a reply button if user has reply permission false', async () => {
+    defaultTopic.permissions.reply = false
+    server.use(
+      graphql.query('GetDiscussionQuery', (req, res, ctx) => {
+        return res.once(
+          ctx.data({
+            legacyNode: {...defaultTopic}
+          })
+        )
+      })
+    )
+    const container = setup({discussionTopic: {...defaultTopic}})
+    await waitFor(() =>
+      expect(container.getByText('This is a Discussion Topic Message')).toBeInTheDocument()
+    )
+
+    await waitFor(() => expect(container.queryByTestId('discussion-topic-reply')).toBeNull())
+    defaultTopic.permissions.reply = true
   })
 })

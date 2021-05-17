@@ -21,6 +21,7 @@ import {Assignment} from '../../../graphql/Assignment'
 import {CollapseReplies} from '../../components/CollapseReplies/CollapseReplies'
 import DateHelper from '../../../../../shared/datetime/dateHelper'
 import {
+  CREATE_DISCUSSION_ENTRY,
   DELETE_DISCUSSION_ENTRY,
   UPDATE_DISCUSSION_ENTRY_PARTICIPANT,
   UPDATE_DISCUSSION_ENTRY
@@ -35,12 +36,18 @@ import LoadingIndicator from '@canvas/loading-indicator'
 import {PostMessage} from '../../components/PostMessage/PostMessage'
 import {PER_PAGE} from '../../utils/constants'
 import PropTypes from 'prop-types'
-import React, {useCallback, useContext, useEffect, useRef, useState} from 'react'
+import React, {useContext, useEffect, useRef, useState} from 'react'
 import {ThreadActions} from '../../components/ThreadActions/ThreadActions'
 import {ThreadingToolbar} from '../../components/ThreadingToolbar/ThreadingToolbar'
 import {useMutation, useQuery} from 'react-apollo'
 import {View} from '@instructure/ui-view'
-import {isGraded, getSpeedGraderUrl} from '../../utils'
+import {
+  isGraded,
+  getSpeedGraderUrl,
+  addReplyToDiscussionEntry,
+  addReplyToSubentries,
+  addReplyToDiscussion
+} from '../../utils'
 import theme from '@instructure/canvas-theme'
 
 export const mockThreads = {
@@ -59,18 +66,44 @@ export const mockThreads = {
       unreadCount: 0,
       repliesCount: 0
     },
-    subentriesCount: 0
+    subentriesCount: 0,
+    permissions: {
+      attach: true,
+      create: true,
+      delete: true,
+      rate: true,
+      read: true,
+      reply: true,
+      update: true,
+      viewRating: true
+    }
   }
 }
 
 export const DiscussionThreadContainer = props => {
-  const AUTO_MARK_AS_READ_DELAY = 3000
-
   const {setOnFailure, setOnSuccess} = useContext(AlertManagerContext)
   const [expandReplies, setExpandReplies] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editorExpanded, setEditorExpanded] = useState(false)
   const threadRef = useRef()
+
+  const updateCache = (cache, result) => {
+    const newDiscussionEntry = result.data.createDiscussionEntry.discussionEntry
+
+    addReplyToDiscussion(cache, props.discussionTopicGraphQLId, newDiscussionEntry)
+    addReplyToDiscussionEntry(cache, props.discussionEntry.id, newDiscussionEntry)
+    addReplyToSubentries(cache, props.discussionEntry._id, newDiscussionEntry)
+  }
+
+  const [createDiscussionEntry] = useMutation(CREATE_DISCUSSION_ENTRY, {
+    update: updateCache,
+    onCompleted: () => {
+      setOnSuccess(I18n.t('The discussion entry was successfully created.'))
+    },
+    onError: () => {
+      setOnFailure(I18n.t('There was an unexpected error creating the discussion entry.'))
+    }
+  })
 
   const [deleteDiscussionEntry] = useMutation(DELETE_DISCUSSION_ENTRY, {
     onCompleted: data => {
@@ -129,23 +162,11 @@ export const DiscussionThreadContainer = props => {
     })
   }
 
-  const markAsRead = useCallback(() => {
-    setTimeout(
-      updateDiscussionEntryParticipant({
-        variables: {
-          discussionEntryId: props.discussionEntry._id,
-          read: true
-        }
-      }),
-      AUTO_MARK_AS_READ_DELAY
-    )
-  }, [updateDiscussionEntryParticipant, props.discussionEntry._id])
-
   const marginDepth = `calc(${theme.variables.spacing.xxLarge} * ${props.depth})`
   const replyMarginDepth = `calc(${theme.variables.spacing.xxLarge} * ${props.depth + 1})`
 
   const threadActions = []
-  if (!props.discussionEntry.deleted) {
+  if (props.discussionEntry.permissions.reply) {
     threadActions.push(
       <ThreadingToolbar.Reply
         key={`reply-${props.discussionEntry.id}`}
@@ -155,6 +176,11 @@ export const DiscussionThreadContainer = props => {
         }}
       />
     )
+  }
+  if (
+    props.discussionEntry.permissions.viewRating &&
+    (props.discussionEntry.permissions.rate || props.discussionEntry.ratingSum > 0)
+  ) {
     threadActions.push(
       <ThreadingToolbar.Like
         key={`like-${props.discussionEntry.id}`}
@@ -162,6 +188,7 @@ export const DiscussionThreadContainer = props => {
         onClick={toggleRating}
         isLiked={props.discussionEntry.rating}
         likeCount={props.discussionEntry.ratingSum || 0}
+        interaction={props.discussionEntry.permissions.rate ? 'enabled' : 'disabled'}
       />
     )
   }
@@ -242,18 +269,20 @@ export const DiscussionThreadContainer = props => {
 
   // Scrolling auto listener to mark messages as read
   useEffect(() => {
-    const observer = new IntersectionObserver(markAsRead, {
-      root: null,
-      rootMargin: '0px',
-      threshold: 0.1
-    })
+    if (!props.discussionEntry.read) {
+      const observer = new IntersectionObserver(() => props.markAsRead(props.discussionEntry._id), {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.1
+      })
 
-    if (threadRef.current) observer.observe(threadRef.current)
+      if (threadRef.current) observer.observe(threadRef.current)
 
-    return () => {
-      if (threadRef.current) observer.unobserve(threadRef.current)
+      return () => {
+        if (threadRef.current) observer.unobserve(threadRef.current)
+      }
     }
-  }, [threadRef, markAsRead])
+  }, [threadRef, props.discussionEntry.read, props])
 
   return (
     <>
@@ -304,14 +333,27 @@ export const DiscussionThreadContainer = props => {
             background="primary"
             borderWidth="none none small none"
             padding="none none small none"
-            margin="none none xSmall none"
+            margin="none none x-small none"
           >
-            <DiscussionEdit onCancel={() => setEditorExpanded(false)} />
+            <DiscussionEdit
+              onSubmit={text => {
+                createDiscussionEntry({
+                  variables: {
+                    discussionTopicId: ENV.discussion_topic_id,
+                    parentEntryId: props.discussionEntry._id,
+                    message: text
+                  }
+                })
+                setEditorExpanded(false)
+              }}
+              onCancel={() => setEditorExpanded(false)}
+            />
           </View>
         )}
       </div>
       {(expandReplies || props.depth > 0) && props.discussionEntry.subentriesCount > 0 && (
         <DiscussionSubentries
+          discussionTopicGraphQLId={props.discussionTopicGraphQLId}
           discussionEntryId={props.discussionEntry._id}
           depth={props.depth + 1}
         />
@@ -340,9 +382,11 @@ export const DiscussionThreadContainer = props => {
 }
 
 DiscussionThreadContainer.propTypes = {
+  discussionTopicGraphQLId: PropTypes.string,
   discussionEntry: DiscussionEntry.shape,
   depth: PropTypes.number,
-  assignment: Assignment.shape
+  assignment: Assignment.shape,
+  markAsRead: PropTypes.func
 }
 
 DiscussionThreadContainer.defaultProps = {
@@ -354,12 +398,12 @@ export default DiscussionThreadContainer
 
 const DiscussionSubentries = props => {
   const {setOnFailure} = useContext(AlertManagerContext)
-
+  const variables = {
+    discussionEntryID: props.discussionEntryId,
+    perPage: PER_PAGE
+  }
   const subentries = useQuery(DISCUSSION_SUBENTRIES_QUERY, {
-    variables: {
-      discussionEntryID: props.discussionEntryId,
-      perPage: PER_PAGE
-    }
+    variables
   })
 
   if (subentries.error) {
@@ -379,11 +423,15 @@ const DiscussionSubentries = props => {
       depth={props.depth}
       assignment={discussionTopic?.assignment}
       discussionEntry={entry}
+      discussionTopicGraphQLId={props.discussionTopicGraphQLId}
+      markAsRead={props.markAsRead}
     />
   ))
 }
 
 DiscussionSubentries.propTypes = {
+  discussionTopicGraphQLId: PropTypes.string,
   discussionEntryId: PropTypes.string,
-  depth: PropTypes.number
+  depth: PropTypes.number,
+  markAsRead: PropTypes.func
 }

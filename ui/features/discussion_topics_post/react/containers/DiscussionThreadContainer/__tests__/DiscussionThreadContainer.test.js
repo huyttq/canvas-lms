@@ -19,6 +19,7 @@
 import {AlertManagerContext} from '@canvas/alerts/react/AlertManager'
 import {ApolloProvider} from 'react-apollo'
 import {DiscussionThreadContainer} from '../DiscussionThreadContainer'
+import {DiscussionEntry} from '../../../../graphql/DiscussionEntry'
 import {fireEvent, render} from '@testing-library/react'
 import {getSpeedGraderUrl} from '../../../utils'
 import {handlers} from '../../../../graphql/mswHandlers'
@@ -93,7 +94,8 @@ describe('DiscussionThreadContainer', () => {
           rate: true,
           read: true,
           reply: true,
-          update: true
+          update: true,
+          viewRating: true
         },
         ...discussionEntryOverrides
       },
@@ -116,6 +118,18 @@ describe('DiscussionThreadContainer', () => {
   it('should render', () => {
     const {container} = setup(defaultProps())
     expect(container).toBeTruthy()
+  })
+
+  it('should not render reply button if reply permission is false', () => {
+    const {queryByTestId} = setup({
+      discussionEntry: DiscussionEntry.mock({permissions: {reply: false}})
+    })
+    expect(queryByTestId('threading-toolbar-reply')).toBeFalsy()
+  })
+
+  it('should render reply button if reply permission is true', () => {
+    const {queryByTestId} = setup(defaultProps())
+    expect(queryByTestId('threading-toolbar-reply')).toBeTruthy()
   })
 
   it('should render expand when nested replies are present', () => {
@@ -147,6 +161,25 @@ describe('DiscussionThreadContainer', () => {
     fireEvent.click(getByTestId('collapse-replies'))
 
     expect(queryByTestId('collapse-replies')).toBeNull()
+  })
+
+  describe('delete permission', () => {
+    it('removed when false', async () => {
+      const new_prop = defaultProps()
+      new_prop.discussionEntry.permissions.delete = false
+      const {getByTestId, queryAllByText} = setup(new_prop)
+      fireEvent.click(getByTestId('thread-actions-menu'))
+
+      expect(queryAllByText('Delete').length).toBe(0)
+    })
+
+    it('present when true', async () => {
+      const {getByTestId, queryAllByText} = setup(defaultProps())
+      fireEvent.click(getByTestId('thread-actions-menu'))
+
+      const deletes = queryAllByText('Delete')
+      expect(deletes.length).toBe(1)
+    })
   })
 
   describe('read state', () => {

@@ -16,7 +16,7 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, {useState} from 'react'
+import React, {useState, useRef, useEffect} from 'react'
 import PropTypes from 'prop-types'
 import {PresentationContent, ScreenReaderContent} from '@instructure/ui-a11y-content'
 import {IconButton, Button} from '@instructure/ui-buttons'
@@ -28,52 +28,73 @@ import {Link} from '@instructure/ui-link'
 import {Text} from '@instructure/ui-text'
 import I18n from 'i18n!CommentLibrary'
 
-const Comment = ({comment, onClick, onDelete}) => {
+const Comment = ({comment, onClick, onDelete, shouldFocus}) => {
+  const deleteButtonRef = useRef(null)
   const [isTruncated, setIsTruncated] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
-  const [isHovering, setIsHovering] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
   const handleUpdate = truncated => {
     setIsTruncated(truncated)
   }
+
+  const handleDelete = () => {
+    // This uses window.confirm due to poor focus
+    // behavior caused by using a Tray with a
+    // Modal.
+    // eslint-disable-next-line no-alert
+    const confirmed = window.confirm(I18n.t('Are you sure you want to delete this comment?'))
+    if (confirmed) {
+      onDelete()
+    }
+  }
+
+  useEffect(() => {
+    if (shouldFocus) {
+      deleteButtonRef.current.focus()
+    }
+  }, [shouldFocus])
 
   return (
     <View as="div" position="relative" borderWidth="none none small none">
       <Flex>
         <Flex.Item as="div" shouldGrow size="80%" shouldShrink>
-          <PresentationContent>
-            <View
-              as="div"
-              padding="small"
-              cursor="pointer"
-              isWithinText={false}
-              onClick={() => onClick(comment)}
-              background={isHovering ? 'brand' : 'transparent'}
-              onMouseEnter={() => setIsHovering(true)}
-              onMouseLeave={() => setIsHovering(false)}
-            >
+          <View
+            as="div"
+            padding="small"
+            cursor="pointer"
+            isWithinText={false}
+            onClick={() => onClick(comment)}
+            background={isFocused ? 'brand' : 'transparent'}
+            onMouseEnter={() => setIsFocused(true)}
+            onMouseLeave={() => setIsFocused(false)}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+          >
+            <PresentationContent>
               {!isExpanded ? (
                 <TruncateText onUpdate={handleUpdate} maxLines={4}>
                   {comment}
                 </TruncateText>
               ) : (
-                comment
+                <Text wrap="break-word">{comment}</Text>
               )}
-            </View>
-          </PresentationContent>
-          <ScreenReaderContent>
-            <Button onClick={() => onClick(comment)}>
-              {I18n.t('Use comment %{comment}', {comment})}
-            </Button>
-          </ScreenReaderContent>
+            </PresentationContent>
+            <ScreenReaderContent>
+              <Button onClick={() => onClick(comment)}>
+                {I18n.t('Use comment %{comment}', {comment})}
+              </Button>
+            </ScreenReaderContent>
+          </View>
         </Flex.Item>
         <Flex.Item size="20%" shouldGrow align="start" textAlign="end">
           <View as="div" padding="x-small small 0 0">
             <IconButton
               screenReaderLabel={I18n.t('Delete comment: %{comment}', {comment})}
               renderIcon={IconTrashLine}
-              onClick={onDelete}
+              onClick={handleDelete}
               withBackground={false}
               withBorder={false}
+              elementRef={el => (deleteButtonRef.current = el)}
               size="small"
             />
           </View>
@@ -99,7 +120,8 @@ const Comment = ({comment, onClick, onDelete}) => {
 Comment.propTypes = {
   comment: PropTypes.string.isRequired,
   onClick: PropTypes.func.isRequired,
-  onDelete: PropTypes.func.isRequired
+  onDelete: PropTypes.func.isRequired,
+  shouldFocus: PropTypes.bool.isRequired
 }
 
 export default Comment

@@ -39,6 +39,10 @@ describe 'user_content post processing' do
     @course.wiki_pages.create!(title: page_title, body: page_content)
   end
 
+  def wait_for_loading_image
+    wait_for_transient_element('.loading_image_holder') { yield }
+  end
+
   describe 'with rce_better_file_downloading flag on' do
     before(:each) { Account.site_admin.enable_feature!(:rce_better_file_downloading) }
 
@@ -238,6 +242,40 @@ describe 'user_content post processing' do
       file_link = f('a#thelink')
       expect(file_link.attribute('class')).to include('file_preview_link')
       expect(f('.instructure_file_holder')).not_to contain_css('img[alt="Preview the document"]')
+
+      wait_for_loading_image { file_link.click }
+      preview_container = f('#preview_1[role="region"]')
+      expect(f('.hide_file_preview_link', preview_container)).to be_displayed
+      expect(f('iframe', preview_container)).to be_displayed
+    end
+
+    it 'shows inline preview for instructure_file_link_holder file_preview_link' do
+      create_wiki_page_with_content(
+        'page',
+        "<span class='instructure_file_link_holder'>
+          <a id='thelink' class='file_preview_link'
+          href='#{@file_url}/preview'>file</a></span>"
+      )
+      get "/courses/#{@course.id}/pages/page"
+
+      file_link = f('a#thelink')
+
+      wait_for_loading_image { file_link.click }
+      preview_container = f('#preview_1[role="region"]')
+      expect(f('.hide_file_preview_link', preview_container)).to be_displayed
+      expect(f('iframe', preview_container)).to be_displayed
+    end
+
+    it 'shows inline preview for instructure_file_link_holder scribd_file_preview_link' do
+      create_wiki_page_with_content(
+        'page',
+        "<span class='instructure_file_link_holder'>
+          <a id='thelink' class='scribd_file_preview_link'
+          href='#{@file_url}/preview'>file</a></span>"
+      )
+      get "/courses/#{@course.id}/pages/page"
+
+      file_link = f('a#thelink')
 
       wait_for_loading_image { file_link.click }
       preview_container = f('#preview_1[role="region"]')

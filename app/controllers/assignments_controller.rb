@@ -120,6 +120,10 @@ class AssignmentsController < ApplicationController
        {}
      end
 
+    js_env({
+      belongs_to_unpublished_module: @locked && !@locked[:can_view] && @locked.dig(:context_module, "workflow_state") == "unpublished"
+    })
+
     mark_done_presenter = MarkDonePresenter.new(self, @context, params["module_item_id"], @current_user, @assignment)
     if mark_done_presenter.has_requirement?
       js_env({
@@ -503,7 +507,7 @@ class AssignmentsController < ApplicationController
 
   def syllabus
     rce_js_env
-    add_crumb t '#crumbs.syllabus', "Syllabus"
+    add_crumb @context.elementary_homeroom_course? ? t("Important Info") : t('#crumbs.syllabus', "Syllabus")
     active_tab = "Syllabus"
     if authorized_action(@context, @current_user, [:read, :read_syllabus])
       return unless tab_enabled?(@context.class::TAB_SYLLABUS)

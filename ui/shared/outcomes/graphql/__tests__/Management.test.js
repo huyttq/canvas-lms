@@ -21,9 +21,9 @@ import {
   removeOutcomeGroup,
   removeOutcome,
   moveOutcomeGroup,
-  updateOutcome,
   createOutcome,
-  addOutcomeGroup
+  addOutcomeGroup,
+  moveOutcome
 } from '../Management'
 
 jest.mock('@canvas/axios')
@@ -54,14 +54,6 @@ describe('api', () => {
     it('provides correct arguments to API request to delete outcome within course context', () => {
       removeOutcome('Course', '1', '2', '3')
       expect(axios.delete).toHaveBeenCalledWith('/api/v1/courses/1/outcome_groups/2/outcomes/3')
-    })
-  })
-
-  describe('updateOutcome', () => {
-    it('provides correct arguments to API request to update outcome', () => {
-      const outcome = {title: 'Outcome', description: 'Description', display_name: 'Display name'}
-      updateOutcome('1', outcome)
-      expect(axios.put).toHaveBeenCalledWith('/api/v1/outcomes/1', outcome)
     })
   })
 
@@ -114,6 +106,22 @@ describe('api', () => {
         '/api/v1/courses/2/outcome_groups/2/outcomes',
         outcome
       )
+    })
+  })
+
+  describe('moveOutcome', () => {
+    it('provides correct arguments to API request to move outcome within account context', () => {
+      moveOutcome('Account', '1', '2', '3', '4')
+      expect(axios.put).toHaveBeenCalledWith('/api/v1/accounts/1/outcome_groups/4/outcomes/2', {
+        move_from: '3'
+      })
+    })
+
+    it('provides correct arguments to API request to move outcome within course context', () => {
+      moveOutcome('Course', '1', '2', '3', '4')
+      expect(axios.put).toHaveBeenCalledWith('/api/v1/courses/1/outcome_groups/4/outcomes/2', {
+        move_from: '3'
+      })
     })
   })
 })

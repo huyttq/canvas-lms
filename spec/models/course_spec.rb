@@ -1817,25 +1817,6 @@ describe Course do
       end
     end
   end
-
-  describe "comment_bank_items_visible_to" do
-    before do
-      @course = course_factory(active_all: true)
-      @user1 = user_model
-      @user2 = user_model
-      @item = comment_bank_item_model(course: @course, user: @user1)
-    end
-
-    it "should return items visible to the provided user" do
-      expect(@course.comment_bank_items_visible_to(@user2)).to eq []
-      expect(@course.comment_bank_items_visible_to(@user1)).to eq [@item]
-    end
-
-    it "should only return active records" do
-      @item.destroy
-      expect(@course.comment_bank_items_visible_to(@user1)).to eq []
-    end
-  end
 end
 
 
@@ -2654,8 +2635,12 @@ describe Course, "tabs_available" do
       available_tabs = @course.tabs_available(@user).map { |tab| tab[:id] }
       default_tabs   = Course.default_tabs.map           { |tab| tab[:id] }
       custom_tabs    = @course.tab_configuration.map     { |tab| tab[:id] }
+      expected_tabs  = (custom_tabs + default_tabs).uniq
+      # Home tab always comes first
+      home_tab = default_tabs[0]
+      expected_tabs  = expected_tabs.insert(0, expected_tabs.delete(home_tab))
 
-      expect(available_tabs).to        eq (custom_tabs + default_tabs).uniq
+      expect(available_tabs).to        eq expected_tabs
       expect(available_tabs.length).to eq default_tabs.length
     end
 
@@ -2741,40 +2726,118 @@ describe Course, "tabs_available" do
       expect(tab_ids).not_to include(Course::TAB_PEOPLE)
     end
 
+    it "enables the home tab and puts it first if it was hidden" do
+      @course.tab_configuration = [
+        {id: Course::TAB_PEOPLE},
+        {id: Course::TAB_ASSIGNMENTS},
+        {id: Course::TAB_HOME, hidden: true}
+      ]
+      available_tabs = @course.tabs_available(@user)
+      expect(available_tabs.map{|tab| tab[:id]}[0]).to eq(Course::TAB_HOME)
+      expect(available_tabs.select{|t| t[:hidden]}).to be_empty
+    end
+
     describe "with canvas_for_elementary feature on" do
-      let(:canvas_for_elem_flag) {@course.root_account.feature_enabled?(:canvas_for_elementary)}
+      context "homeroom course" do
+        before :once do
+          @course.root_account.enable_feature!(:canvas_for_elementary)
+          @course.account.settings[:enable_as_k5_account] = {value: true}
+          @course.homeroom_course = true
+          @course.save!
+        end
 
-      before(:each) {
-        @course.root_account.enable_feature!(:canvas_for_elementary)
-        @course.account.settings[:enable_as_k5_account] = {value: true}
-        @course.homeroom_course = true
-        @course.save!
-      }
+        it 'hides most tabs for homeroom courses' do
+          tab_ids = @course.tabs_available(@user).map{|t| t[:id] }
+          expect(tab_ids).to eq [Course::TAB_ANNOUNCEMENTS, Course::TAB_SYLLABUS, Course::TAB_PEOPLE, Course::TAB_SETTINGS]
+        end
 
-      after(:each) {
-        @course.root_account.set_feature_flag!(:canvas_for_elementary, :canvas_for_elem_flag ? 'on' : 'off')
-      }
+        it 'renames the syllabus tab to important info' do
+          syllabus_tab = @course.tabs_available(@user).find{|t| t[:id] == Course::TAB_SYLLABUS }
+          expect(syllabus_tab[:label]).to eq('Important Info')
+        end
 
-      it 'hides most tabs for homeroom courses' do
-        tab_ids = @course.tabs_available(@user).map{|t| t[:id] }
-        expect(tab_ids).to eq [Course::TAB_ANNOUNCEMENTS, Course::TAB_PEOPLE, Course::TAB_SETTINGS]
+        it 'hides external tools in nav' do
+          @course.context_external_tools.create!(
+              :url => "http://example.com/ims/lti",
+              :consumer_key => "asdf",
+              :shared_secret => "hjkl",
+              :name => "external tool 1",
+              :course_navigation => {
+                  :text => "blah",
+                  :url =>  "http://example.com/ims/lti",
+                  :default => false,
+              }
+          )
+          @course.tab_configuration = [{:id => Course::TAB_ANNOUNCEMENTS}, {:id => 'context_external_tool_8'}]
+          tab_ids = @course.tabs_available(@user).map{|t| t[:id] }
+          expect(tab_ids).to eq [Course::TAB_ANNOUNCEMENTS, Course::TAB_SYLLABUS, Course::TAB_PEOPLE, Course::TAB_SETTINGS]
+        end
       end
 
-      it 'hides external tools in nav' do
-        @course.context_external_tools.create!(
-          :url => "http://example.com/ims/lti",
-          :consumer_key => "asdf",
-          :shared_secret => "hjkl",
-          :name => "external tool 1",
-          :course_navigation => {
-            :text => "blah",
-            :url =>  "http://example.com/ims/lti",
-            :default => false,
-          }
-        )
-        @course.tab_configuration = [{:id => Course::TAB_ANNOUNCEMENTS}, {:id => 'context_external_tool_8'}]
-        tab_ids = @course.tabs_available(@user).map{|t| t[:id] }
-        expect(tab_ids).to eq [Course::TAB_ANNOUNCEMENTS, Course::TAB_PEOPLE, Course::TAB_SETTINGS]
+      context "subject course" do
+        before :once do
+          @course.root_account.enable_feature!(:canvas_for_elementary)
+          @course.account.settings[:enable_as_k5_account] = {value: true}
+          @course.save!
+        end
+
+        it "returns default course tabs without home if course_subject_tabs option is not passed" do
+          course_elementary_nav_tabs = Course.default_tabs.reject{|tab| tab[:id] == Course::TAB_HOME}
+          length = course_elementary_nav_tabs.length
+          tab_ids = @course.tabs_available(@user).map{|t| t[:id] }
+          expect(tab_ids).to eql(course_elementary_nav_tabs.map{|t| t[:id] })
+          expect(tab_ids.length).to eql(length)
+        end
+
+        context "with course_subject_tabs option" do
+          it "returns subject tabs only by default" do
+            length = Course.course_subject_tabs.length
+            tab_ids = @course.tabs_available(@user, course_subject_tabs: true).map{|t| t[:id] }
+            expect(tab_ids).to eql(Course.course_subject_tabs.map{|t| t[:id] })
+            expect(tab_ids.length).to eql(length)
+          end
+
+          it "respects saved tab configuration ordering" do
+            @course.tab_configuration = [
+                { id: Course::TAB_HOME },
+                { id: Course::TAB_ANNOUNCEMENTS },
+                { id: Course::TAB_MODULES },
+                { id: Course::TAB_GRADES },
+                { id: Course::TAB_SETTINGS }
+            ]
+            available_tabs = @course.tabs_available(@user, course_subject_tabs: true).map { |tab| tab[:id] }
+            expected_tabs = [Course::TAB_HOME, Course::TAB_SCHEDULE, Course::TAB_MODULES, Course::TAB_GRADES]
+
+            expect(available_tabs).to eq expected_tabs
+          end
+
+          it "always puts external tools last" do
+            tools = []
+            2.times do |n|
+              tools << @course.context_external_tools.create!(
+                  :url => "http://example.com/ims/lti",
+                  :consumer_key => "asdf",
+                  :shared_secret => "hjkl",
+                  :name => "external tool #{n+1}",
+                  :course_navigation => {
+                      :text => "blah",
+                      :url =>  "http://example.com/ims/lti",
+                      :default => false,
+                  }
+              )
+            end
+            t1, t2 = tools
+            @course.tab_configuration = [
+                {id: Course::TAB_HOME},
+                {id: t1.asset_string},
+                {id: Course::TAB_ANNOUNCEMENTS, hidden: true},
+                {id: t2.asset_string, hidden: true}
+            ]
+            available_tabs = @course.tabs_available(@user, course_subject_tabs: true, include_external: true, for_reordering: true)
+            expected_tab_ids = Course.course_subject_tabs.map{|t| t[:id]} + [t1.asset_string, t2.asset_string]
+            expect(available_tabs.map{|t| t[:id]}).to eql(expected_tab_ids)
+          end
+        end
       end
     end
   end
@@ -4423,72 +4486,6 @@ describe Course, 'tabs_available' do
   end
 end
 
-describe Course, 'hide_external_tool_tabs_if_necessary' do
-  before :once do
-    course_model
-  end
-
-  def hide_tool(tool)
-    @course.tab_configuration = [{id: tool.asset_string, hidden: true}]
-    @course.save!
-  end
-
-  def unhide_tool(tool)
-    @course.tab_configuration = [{id: tool.asset_string}]
-    @course.save!
-  end
-
-  context 'when tool does not have visibility defined' do
-    def new_tool
-      tool = @course.context_external_tools.new(name: "bob", consumer_key: "bob", shared_secret: "bob", domain: "example.com")
-      tool.course_navigation = {url: "http://www.example.com", default: "active" }
-      tool.save!
-      tool
-    end
-
-    it 'restricts tool visibility to teachers when tool tab is hidden from navigation' do
-      tool = new_tool
-      hide_tool(tool)
-      expect(tool.reload.settings.dig(:course_navigation, :visibility_override)).to eq('admins')
-    end
-
-    it 'removes restrictions on tool visibility when tool tab is unhidden' do
-      tool = new_tool
-      hide_tool(tool)
-      unhide_tool(tool)
-      expect(tool.reload.settings.dig(:course_navigation, :visibility_override)).to be_nil
-    end
-  end
-
-  context 'when tool has visibility defined' do
-    def new_tool
-      tool = @course.context_external_tools.new(name: "bob", consumer_key: "bob", shared_secret: "bob", domain: "example.com")
-      tool.course_navigation = {url: "http://www.example.com", visibility: 'members', default: "active" }
-      tool.save!
-      tool
-    end
-
-    it 'keeps originally-defined visibility for later reuse' do
-      tool = new_tool
-      hide_tool(tool)
-      settings = tool.reload.settings
-
-      expect(settings.dig(:course_navigation, :visibility_override)).to eq('admins')
-      expect(settings.dig(:course_navigation, :visibility)).to eq('members')
-    end
-
-    it 'restores originally-defined visibility when tool is un-hidden' do
-      tool = new_tool
-      hide_tool(tool)
-      unhide_tool(tool)
-      settings = tool.reload.settings
-
-      expect(settings.dig(:course_navigation, :visibility_override)).to be_nil
-      expect(settings.dig(:course_navigation, :visibility)).to eq('members')
-    end
-  end
-end
-
 describe Course, 'tab_hidden?' do
   before :once do
     course_model
@@ -4926,6 +4923,80 @@ describe Course, "enrollments" do
     @course.save!
     expect(@course.student_enrollments.reload.map(&:root_account_id)).to eq [a2.id]
     expect(@course.course_sections.reload.map(&:root_account_id)).to eq [a2.id]
+  end
+end
+
+describe Course, "#sync_homeroom_enrollments" do
+  before :once do
+    @homeroom_course = course_factory(active_course: true)
+    @homeroom_course.root_account.enable_feature!(:canvas_for_elementary)
+    @homeroom_course.account.settings[:enable_as_k5_account] = {value: true}
+    @homeroom_course.homeroom_course = true
+    @homeroom_course.save!
+
+    @teacher = User.create
+    @homeroom_course.enroll_teacher(@teacher).accept
+
+    @ta = User.create
+    @homeroom_course.enroll_user(@ta, "TaEnrollment").accept
+
+    @student = User.create
+    @homeroom_course.enroll_user(@student, "StudentEnrollment").accept
+
+    @observer = User.create
+    @homeroom_course.enroll_user(@observer, "ObserverEnrollment").accept
+
+    @course = course_factory(active_course: true, account: @homeroom_course.account)
+    @course.sync_enrollments_from_homeroom = true
+    @course.homeroom_course_id = @homeroom_course.id
+    @course.save!
+  end
+
+  it "copies enrollments the homeroom course" do
+    expect(@course.user_is_instructor?(@teacher)).to eq(false)
+    expect(@course.user_is_instructor?(@ta)).to eq(false)
+    expect(@course.user_is_student?(@student)).to eq(false)
+    expect(@course.user_has_been_observer?(@observer)).to eq(false)
+    @course.sync_homeroom_enrollments
+    expect(@course.user_is_instructor?(@teacher)).to eq(true)
+    expect(@course.user_is_instructor?(@ta)).to eq(true)
+    expect(@course.user_is_student?(@student)).to eq(true)
+    expect(@course.user_has_been_observer?(@observer)).to eq(true)
+  end
+
+  it "readds enrollments deleted on subject courses" do
+    @course.sync_homeroom_enrollments
+    @course.enrollments.find_by(user: @teacher).destroy
+    expect(@course.user_is_instructor?(@teacher)).to eq(false)
+    @course.sync_homeroom_enrollments
+    expect(@course.user_is_instructor?(@teacher)).to eq(true)
+  end
+
+  it "removes enrollments on subject courses when removed on the homeroom" do
+    @course.sync_homeroom_enrollments
+    expect(@course.user_is_instructor?(@teacher)).to eq(true)
+    @homeroom_course.enrollments.find_by(user: @teacher).destroy
+    @course.sync_homeroom_enrollments
+    expect(@course.user_is_instructor?(@teacher)).to eq(false)
+  end
+
+  it "returns false unless course is an elementary subject and sync setting is on and homeroom_course_id is set" do
+    @course.sync_enrollments_from_homeroom = false
+    @course.save!
+    expect(@course.sync_homeroom_enrollments).to eq(false)
+    @course.sync_enrollments_from_homeroom = true
+    @course.homeroom_course_id = nil
+    @course.save!
+    expect(@course.sync_homeroom_enrollments).to eq(false)
+    @course.homeroom_course_id = @homeroom_course.id
+    @course.save!
+    expect(@course.sync_homeroom_enrollments).not_to eq(false)
+  end
+
+  it "returns false unless the homeroom_course_id is accessible within the account" do
+    @course.homeroom_course_id = 0
+    @course.save!
+    expect(@course.sync_homeroom_enrollments).to eq(false)
   end
 end
 
@@ -6341,6 +6412,30 @@ describe Course, "#show_total_grade_as_points?" do
       expect(course.can_stop_being_template?).to be false
       course.template = false
       expect(course).not_to be_valid
+    end
+  end
+
+  describe "#copy_from_course_template" do
+    it "copies unpublished content" do
+      course = Course.create!(template: true)
+      course.root_account.enable_feature!(:course_templates)
+      course.account.update!(course_template: course)
+      a = course.assignments.create!(title: 'bob', workflow_state: 'unpublished')
+      expect(a).to be_unpublished
+      q = course.quizzes.create!(title: 'joe', workflow_state: 'unpublished')
+      expect(q).to be_unpublished
+      wp = course.wiki_pages.create!(title: 'george', workflow_state: 'unpublished')
+      expect(wp).to be_unpublished
+      dt = course.discussion_topics.create!(title: 'phil', workflow_state: 'unpublished')
+      expect(dt).to be_unpublished
+
+      course2 = Course.create!
+      run_jobs
+
+      expect(course2.assignments.pluck(:title)).to eq ['bob']
+      expect(course2.quizzes.pluck(:title)).to eq ['joe']
+      expect(course2.wiki_pages.pluck(:title)).to eq ['george']
+      expect(course2.discussion_topics.pluck(:title)).to eq ['phil']
     end
   end
 end

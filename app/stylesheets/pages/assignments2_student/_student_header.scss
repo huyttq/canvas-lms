@@ -16,13 +16,14 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-.assignment-student-submission-tracker {
+.assignment-student-submission-tracker,
+.selected-submission-grade {
   line-height: normal;
 }
 
 .assignment-student-header {
   position: sticky;
-  padding: 12px;
+  padding-bottom: 12px;
   top: 0px;
   #{direction(right)}: 0px;
   background-color: white;

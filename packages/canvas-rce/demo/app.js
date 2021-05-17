@@ -28,8 +28,10 @@ import {View} from '@instructure/ui-view'
 import CanvasRce from '../src/rce/CanvasRce'
 import '@instructure/canvas-theme'
 
-import locales from '../src/locales'
+import {getLocaleList} from '../src/getTranslations'
 import * as fakeSource from '../src/sidebar/sources/fake'
+
+const locales = getLocaleList()
 
 function renderDemos(state) {
   const {
@@ -79,6 +81,7 @@ function renderDemos(state) {
       textareaId="textarea3"
       defaultContent="hello RCE"
       height={350}
+      highContrastCSS={[]}
       trayProps={trayProps}
     />,
     document.getElementById('content')
@@ -197,7 +200,7 @@ class DemoOptions extends Component {
               value={this.state.lang}
               onChange={(_e, option) => this.setState({lang: option.value})}
             >
-              {['en', ...Object.keys(locales), 'bad-locale-default-en'].map(locale => (
+              {[...locales, 'bad-locale-default-en'].map(locale => (
                 <SimpleSelect.Option id={locale} key={locale} value={locale}>
                   {locale}
                 </SimpleSelect.Option>

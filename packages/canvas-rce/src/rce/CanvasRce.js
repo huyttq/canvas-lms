@@ -17,15 +17,14 @@
  */
 
 import React, {createRef, useState} from 'react'
-import {number, string} from 'prop-types'
+import {arrayOf, number, string} from 'prop-types'
 import formatMessage from '../format-message'
 import RCEWrapper from './RCEWrapper'
 import {trayPropTypes} from './plugins/shared/CanvasContentTray'
 import editorLanguage from './editorLanguage'
 import normalizeLocale from './normalizeLocale'
 import tinyRCE from './tinyRCE'
-import getTinymceTranslations from '../getTinymceTranslations'
-import getRceTranslations from '../getRceTranslations'
+import getTranslations from '../getTranslations'
 import '@instructure/canvas-theme'
 
 if (!process?.env?.BUILD_LOCALE) {
@@ -60,6 +59,7 @@ const baseProps = {
   //   refreshToken: () => {},
   //   themeUrl: undefined // "/dist/brandable_css/default/variables-8391c84da435c9cfceea2b2b3317ff66.json"
   // },
+  highContrastCSS: [],
   use_rce_pretty_html_editor: true,
   editorOptions: {
     // block_formats: 'Paragraph=p;Header 2=h2;Header 3=h3;Header 4=h4;Preformatted=pre',
@@ -143,30 +143,19 @@ function addCanvasConnection(propsOut, propsIn) {
   }
 }
 export default function CanvasRce(props) {
-  const {defaultContent, textareaId, height, language, trayProps, ...rest} = props
+  const {defaultContent, textareaId, height, language, highContrastCSS, trayProps, ...rest} = props
   const rceRef = createRef(null)
   useState(() => formatMessage.setup({locale: normalizeLocale(props.language)}))
-  const [tinyTranslations, setTinyTranslations] = useState(() => {
-    const locale = editorLanguage(props.language)
-    const p = getTinymceTranslations(locale)
-      .then(() => {
-        setTinyTranslations(true)
-      })
-      .catch(err => {
-        console.log('>>>', err)
-        setTinyTranslations(false)
-      })
-    return p
-  })
-  const [rceTranslations, setRceTranslations] = useState(() => {
+  const [translations, setTranslations] = useState(() => {
     const locale = normalizeLocale(props.language)
-    const p = getRceTranslations(locale)
+    const p = getTranslations(locale)
       .then(() => {
-        setRceTranslations(true)
+        setTranslations(true)
       })
       .catch(err => {
-        console.log('>>>', err)
-        setRceTranslations(false)
+        // eslint-disable-next-line no-console
+        console.error('Failed loading the language file for', locale, '\n Cause:', err)
+        setTranslations(false)
       })
     return p
   })
@@ -183,6 +172,7 @@ export default function CanvasRce(props) {
   // corresponding name for tinymce.
   const rceProps = {...baseProps}
   rceProps.language = normalizeLocale(props.language || 'en')
+  rceProps.highContrastCSS = highContrastCSS || []
   rceProps.defaultContent = defaultContent
   rceProps.textareaId = textareaId
   rceProps.editorOptions.selector = `#${textareaId}`
@@ -192,7 +182,7 @@ export default function CanvasRce(props) {
 
   addCanvasConnection(rceProps, props)
 
-  if (typeof tinyTranslations !== 'boolean' || typeof rceTranslations !== 'boolean') {
+  if (typeof translations !== 'boolean') {
     return formatMessage('Loading...')
   } else {
     return <RCEWrapper ref={rceRef} tinymce={tinyRCE} {...rceProps} {...rest} />
@@ -204,5 +194,6 @@ CanvasRce.propTypes = {
   defaultContent: string,
   textareaId: string.isRequired,
   height: number,
+  highContrastCSS: arrayOf(string),
   trayProps: trayPropTypes
 }

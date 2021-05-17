@@ -246,12 +246,42 @@ describe('Assignment Student Content View', () => {
     })
 
     it('does not render the number of attempts if the assignment does not involve digital submissions', async () => {
-      const assignment = await mockAssignment({
+      const props = await mockAssignmentAndSubmission({
         Assignment: {allowedAttempts: 3, nonDigitalSubmission: true}
       })
 
-      const {queryByText} = render(<AssignmentDetails assignment={assignment} />)
+      const {queryByText} = render(
+        <MockedProvider>
+          <StudentContent {...props} />
+        </MockedProvider>
+      )
       expect(queryByText('3 Attempts')).not.toBeInTheDocument()
+    })
+
+    it('takes into account extra attempts awarded to the student', async () => {
+      const props = await mockAssignmentAndSubmission({
+        Assignment: {allowedAttempts: 3},
+        Submission: {extraAttempts: 2}
+      })
+      const {getByText} = render(
+        <MockedProvider>
+          <StudentContent {...props} />
+        </MockedProvider>
+      )
+      expect(getByText('5 Attempts')).toBeInTheDocument()
+    })
+
+    it('treats a null value for extraAttempts as zero', async () => {
+      const props = await mockAssignmentAndSubmission({
+        Assignment: {allowedAttempts: 3},
+        Submission: {extraAttempts: null}
+      })
+      const {getByText} = render(
+        <MockedProvider>
+          <StudentContent {...props} />
+        </MockedProvider>
+      )
+      expect(getByText('3 Attempts')).toBeInTheDocument()
     })
   })
 
@@ -270,6 +300,21 @@ describe('Assignment Student Content View', () => {
       )
       // Reason why this is showing up twice is once for screenreader content and again for regular content
       expect(getAllByText('Available: Jul 11, 2016 7:00pm')).toHaveLength(2)
+    })
+  })
+
+  describe('Unpublished module', () => {
+    it('renders UnpublishedModule', async () => {
+      window.ENV = {belongs_to_unpublished_module: true}
+      const props = await mockAssignmentAndSubmission()
+      const {getByText} = render(
+        <MockedProvider>
+          <StudentContent {...props} />
+        </MockedProvider>
+      )
+      expect(
+        getByText('This assignment is part of an unpublished module and is not available yet.')
+      ).toBeInTheDocument()
     })
   })
 })

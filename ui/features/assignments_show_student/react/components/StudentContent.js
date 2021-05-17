@@ -33,7 +33,9 @@ import {Spinner} from '@instructure/ui-spinner'
 import {Submission} from '@canvas/assignments/graphql/student/Submission'
 import StudentFooter from './StudentFooter'
 import {Text} from '@instructure/ui-elements'
+import {totalAllowedAttempts} from '../helpers/SubmissionHelpers'
 import {View} from '@instructure/ui-layout'
+import UnpublishedModule from '../UnpublishedModule'
 
 const LoggedOutTabs = lazy(() => import('./LoggedOutTabs'))
 
@@ -79,13 +81,13 @@ function renderSubmissionlessAssignment({assignment}, alertContext) {
   )
 }
 
-function renderAttemptsAndAvailability({assignment}) {
+function renderAttemptsAndAvailability({assignment, submission}) {
   return (
     <View as="div" margin="medium 0">
       <Text as="div" weight="bold">
         {I18n.t(
           {zero: 'Unlimited Attempts', one: '1 Attempt', other: '%{count} Attempts'},
-          {count: assignment.allowedAttempts || 0}
+          {count: totalAllowedAttempts({assignment, submission}) || 0}
         )}
       </Text>
       <Text as="div">
@@ -103,6 +105,8 @@ function renderContentBaseOnAvailability({assignment, submission}, alertContext)
     return <DateLocked date={assignment.env.unlockDate} type="assignment" />
   } else if (assignment.nonDigitalSubmission) {
     return renderSubmissionlessAssignment({assignment}, alertContext)
+  } else if (ENV.belongs_to_unpublished_module) {
+    return <UnpublishedModule />
   } else if (submission == null) {
     // NOTE: handles case where user is not logged in, or the course hasn't started yet
     return (
@@ -119,7 +123,7 @@ function renderContentBaseOnAvailability({assignment, submission}, alertContext)
   } else {
     return (
       <>
-        {renderAttemptsAndAvailability({assignment})}
+        {renderAttemptsAndAvailability({assignment, submission})}
         <AssignmentToggleDetails description={assignment.description} />
         {assignment.rubric && (
           <Suspense fallback={<LoadingIndicator />}>

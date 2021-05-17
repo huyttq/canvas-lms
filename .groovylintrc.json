@@ -28,6 +28,9 @@
     "Instanceof": {
       "enabled": false
     },
+    "InvertedIfElse": {
+      "enabled": false
+    },
     "JUnitStyleAssertions": {
       "enabled": false
     },
@@ -52,11 +55,23 @@
     "PropertyName": {
       "enabled": false
     },
+    "ThrowException": {
+      "enabled": false
+    },
     "UnnecessaryGetter": {
+      "enabled": false
+    },
+    "UnnecessaryObjectReferences": {
+      "enabled": false
+    },
+    "UnnecessaryPackageReference": {
       "enabled": false
     },
     "UnnecessarySetter": {
       "enabled": false
+    },
+    "VariableName": {
+      "finalRegex": "[A-Z][A-Z0-9_]*"
     },
     "VariableTypeRequired": {
       "enabled": false

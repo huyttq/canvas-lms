@@ -22,7 +22,6 @@ import groovy.transform.Field
 
 def _getDockerInputs() {
   def inputVars = [
-    "--volume $WORKSPACE/.git:/usr/src/app/.git",
     '--env GERGICH_DB_PATH=/home/docker/gergich',
     "--env GERGICH_PUBLISH=$GERGICH_PUBLISH",
     "--env GERGICH_KEY=$GERGICH_KEY",
@@ -39,7 +38,6 @@ def _getDockerInputs() {
 
   if (env.GERRIT_PROJECT != 'canvas-lms') {
     inputVars.addAll([
-      "--volume $WORKSPACE/gems/plugins/$GERRIT_PROJECT/.git:/usr/src/app/gems/plugins/$GERRIT_PROJECT/.git",
       "--env GERGICH_GIT_PATH=/usr/src/app/gems/plugins/$GERRIT_PROJECT",
     ])
   }
@@ -48,18 +46,10 @@ def _getDockerInputs() {
 }
 
 def setupNode() {
-  credentials.withStarlordDockerLogin {
-    sh './build/new-jenkins/linters/docker-build.sh local/gergich'
+  distribution.unstashBuildScripts()
 
-    if (configuration.getBoolean('upload-linter-debug-image', 'false')) {
-      sh """
-      docker tag local/gergich $LINTER_DEBUG_IMAGE
-      docker push $LINTER_DEBUG_IMAGE
-      """
-    }
-
-    sh "docker volume create $dockerVolumeName"
-  }
+  sh './build/new-jenkins/docker-with-flakey-network-protection.sh pull $LINTERS_RUNNER_IMAGE'
+  sh "docker volume create $dockerVolumeName"
 }
 
 def tearDownNode() {
@@ -82,6 +72,27 @@ def codeStage() {
 
   if (configuration.getBoolean('force-failure-linters', 'false')) {
     error 'lintersStage: force failing due to flag'
+  }
+}
+
+def dependencyCheckStage() {
+  catchError (buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+    try {
+      snyk('canvas-lms:ruby', 'Gemfile.lock', "$LINTERS_RUNNER_IMAGE")
+    }
+    catch (err) {
+      if (err.toString().contains('Gemfile.lock does not exist')) {
+        snyk('canvas-lms:ruby', 'Gemfile.lock.next', "$LINTERS_RUNNER_IMAGE")
+      } else {
+        throw err
+      }
+    }
+  }
+}
+
+def masterBouncerStage() {
+  credentials.withMasterBouncerCredentials {
+    sh 'build/new-jenkins/linters/run-master-bouncer.sh'
   }
 }
 

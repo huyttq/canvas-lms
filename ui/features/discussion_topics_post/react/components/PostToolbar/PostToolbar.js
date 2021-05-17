@@ -33,6 +33,7 @@ import {
   IconMarkAsReadLine,
   IconMoreLine,
   IconNoSolid,
+  IconPeerReviewLine,
   IconRubricSolid,
   IconSpeedGraderSolid,
   IconTrashLine,
@@ -143,19 +144,20 @@ const getMenuConfigs = props => {
       selectionCallback: props.onDelete
     })
   }
-  if (props.onToggleComments && props.commentsEnabled) {
+  if (props.onCloseForComments) {
     options.push({
       key: 'toggle-comments',
       icon: <IconLockLine />,
       label: I18n.t('Close for Comments'),
-      selectionCallback: props.onToggleComments
+      selectionCallback: props.onCloseForComments
     })
-  } else if (props.onToggleComments && !props.commentsEnabled) {
+  }
+  if (props.onOpenForComments) {
     options.push({
       key: 'toggle-comments',
       icon: <IconUnlockLine />,
       label: I18n.t('Open for Comments'),
-      selectionCallback: props.onToggleComments
+      selectionCallback: props.onOpenForComments
     })
   }
   if (props.onSend) {
@@ -182,12 +184,20 @@ const getMenuConfigs = props => {
       selectionCallback: props.onOpenSpeedgrader
     })
   }
-  if (props.onShowRubric) {
+  if (props.onShowRubric && !props.onAddRubric) {
     options.push({
       key: 'rubric',
       icon: <IconRubricSolid />,
       label: I18n.t('Show Rubric'),
       selectionCallback: props.onShowRubric
+    })
+  }
+  if (props.onAddRubric) {
+    options.push({
+      key: 'rubric',
+      icon: <IconRubricSolid />,
+      label: I18n.t('Add Rubric'),
+      selectionCallback: props.onAddRubric
     })
   }
   if (props.onShareToCommons) {
@@ -196,6 +206,14 @@ const getMenuConfigs = props => {
       icon: <IconCommonsSolid />,
       label: I18n.t('Share to Commons'),
       selectionCallback: props.onShareToCommons
+    })
+  }
+  if (props.onPeerReviews) {
+    options.push({
+      key: 'peerReviews',
+      icon: <IconPeerReviewLine />,
+      label: I18n.t('Peer Reviews'),
+      selectionCallback: props.onPeerReviews
     })
   }
   return options
@@ -228,16 +246,6 @@ PostToolbar.propTypes = {
    * Providing this function will result in the menu option being rendered.
    */
   onDelete: PropTypes.func,
-  /**
-   * Behavior for toggling the ability to comment on the post.
-   * Providing this function will result in the menu option being rendered.
-   */
-  onToggleComments: PropTypes.func,
-  /**
-   * Indicates whether comments have been enabled or not.
-   * Which toggling menu option is rendered is dependent on this prop.
-   */
-  commentsEnabled: PropTypes.bool,
   /**
    * Behavior for sending to a recipient.
    * Providing this function will result in the menu option being rendered.
@@ -282,19 +290,33 @@ PostToolbar.propTypes = {
    */
   onShowRubric: PropTypes.func,
   /**
+   * Callback to be fired when Add Rubric action is fired
+   */
+  onAddRubric: PropTypes.func,
+  /**
    * Callback to be fired when Share to Commons action is fired.
    */
   onShareToCommons: PropTypes.func,
-
   /**
    * Indicate the replies count associated with the Post.
    */
   repliesCount: PropTypes.number,
-
   /**
    * Indicate the unread count associated with the Post.
    */
-  unreadCount: PropTypes.number
+  unreadCount: PropTypes.number,
+  /**
+   * Callback to be fired when Peer Review action is fired
+   */
+  onPeerReviews: PropTypes.func,
+  /**
+   * Callback to be fired when Open for Comments action is fired
+   */
+  onOpenForComments: PropTypes.func,
+  /**
+   * Callback to be fired when Close for Comments action is fired
+   */
+  onCloseForComments: PropTypes.func
 }
 
 PostToolbar.defaultProps = {

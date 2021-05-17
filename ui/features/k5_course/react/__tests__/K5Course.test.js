@@ -18,7 +18,7 @@
 
 import React from 'react'
 import moxios from 'moxios'
-import {act, fireEvent, render, waitFor} from '@testing-library/react'
+import {render, waitFor} from '@testing-library/react'
 import {K5Course} from '../K5Course'
 import fetchMock from 'fetch-mock'
 import {
@@ -47,6 +47,7 @@ const defaultEnv = {
   MOMENT_LOCALE: 'en',
   TIMEZONE: 'America/Denver'
 }
+const defaultTabs = [{id: '0'}, {id: '19'}, {id: '10'}, {id: '5'}, {id: 'context_external_tool_1'}]
 const defaultProps = {
   currentUser,
   loadAllOpportunities: () => {},
@@ -58,7 +59,10 @@ const defaultProps = {
   hideFinalGrades: false,
   userIsInstructor: false,
   showStudentView: false,
-  studentViewPath: '/courses/30/student_view/1'
+  studentViewPath: '/courses/30/student_view/1',
+  showLearningMasteryGradebook: false,
+  tabs: defaultTabs,
+  settingsPath: '/courses/30/settings'
 }
 const FETCH_APPS_URL = '/api/v1/courses/30/external_tools/visible_course_nav_tools'
 const FETCH_TABS_URL = '/api/v1/courses/30/tabs'
@@ -134,66 +138,64 @@ describe('K-5 Subject Course', () => {
       expect(getByText(defaultProps.name)).toBeInTheDocument()
     })
 
-    it('shows Home, Schedule, Modules, Grades, and Resources options', () => {
+    it('shows Home, Schedule, Modules, Grades, and Resources options if configured', () => {
       const {getByText} = render(<K5Course {...defaultProps} />)
       ;['Home', 'Schedule', 'Modules', 'Grades', 'Resources'].forEach(label =>
         expect(getByText(label)).toBeInTheDocument()
       )
     })
 
-    it('defaults to the Home tab', () => {
+    it('defaults to the first tab', () => {
       const {getByRole} = render(<K5Course {...defaultProps} />)
       expect(getByRole('tab', {name: 'Home', selected: true})).toBeInTheDocument()
+    })
+
+    it('only renders non-hidden tabs, in the order they are provided', () => {
+      const tabs = [
+        {id: '10'},
+        {id: '5', hidden: true},
+        {id: '19'},
+        {id: 'context_external_tool_3', hidden: true}
+      ]
+      const {getAllByRole} = render(<K5Course {...defaultProps} tabs={tabs} />)
+      const renderedTabs = getAllByRole('tab')
+      expect(renderedTabs.map(({id}) => id.replace('tab-', ''))).toEqual([
+        TAB_IDS.MODULES,
+        TAB_IDS.SCHEDULE
+      ])
+    })
+
+    it('renders an empty state instead of any tabs if none are provided', () => {
+      const {getByTestId, getByText, queryByRole} = render(<K5Course {...defaultProps} tabs={[]} />)
+      expect(getByText(defaultProps.name)).toBeInTheDocument()
+      expect(queryByRole('tab')).not.toBeInTheDocument()
+      expect(getByTestId('space-panda')).toBeInTheDocument()
+      expect(getByText('Welcome to the cold, dark void of Arts and Crafts.')).toBeInTheDocument()
+    })
+
+    it('renders a link to update tab settings if no tabs are provided and the user has manage permissions', () => {
+      const {getByRole} = render(<K5Course {...defaultProps} canManage tabs={[]} />)
+      const link = getByRole('link', {name: 'Reestablish your world'})
+      expect(link).toBeInTheDocument()
+      expect(link.href).toBe('http://localhost/courses/30/settings#tab-navigation')
     })
   })
 
   describe('Manage course functionality', () => {
     it('Shows a manage button when the user has manage permissions', () => {
       const {getByRole} = render(<K5Course {...defaultProps} canManage />)
-      expect(getByRole('button', {name: 'Manage'})).toBeInTheDocument()
+      expect(getByRole('link', {name: 'Manage Subject'})).toBeInTheDocument()
     })
 
-    it('The manage button opens a slide-out tray with the course navigation tabs when clicked', async () => {
+    it('Should redirect to course settings path when clicked', async () => {
       const {getByRole} = render(<K5Course {...defaultProps} canManage />)
-      const manageButton = getByRole('button', {name: 'Manage'})
-
-      act(() => manageButton.click())
-
-      const validateLink = (name, href) => {
-        const link = getByRole('link', {name})
-        expect(link).toBeInTheDocument()
-        expect(link.href).toBe(href)
-      }
-
-      await waitFor(() => {
-        validateLink('Home', 'http://localhost/courses/30')
-        validateLink('Modules', 'http://localhost/courses/30/modules')
-        validateLink('Assignments', 'http://localhost/courses/30/assignments')
-        validateLink('Settings', 'http://localhost/courses/30/settings')
-      })
-    })
-
-    it('Displays an icon indicating that a nav link is hidden from students', async () => {
-      const {findAllByTestId, getByRole, getByText} = render(
-        <K5Course {...defaultProps} canManage />
-      )
-      const manageButton = getByRole('button', {name: 'Manage'})
-
-      act(() => manageButton.click())
-
-      const hiddenIcons = await findAllByTestId('k5-course-nav-hidden-icon')
-      // Doesn't show the icon for settings, though
-      expect(hiddenIcons.length).toBe(1)
-
-      fireEvent.mouseOver(hiddenIcons[0])
-      await waitFor(() =>
-        expect(getByText('Disabled. Not visible to students')).toBeInTheDocument()
-      )
+      const manageSubjectBtn = getByRole('link', {name: 'Manage Subject'})
+      expect(manageSubjectBtn.href).toBe('http://localhost/courses/30/settings')
     })
 
     it('Does not show a manage button when the user does not have manage permissions', () => {
       const {queryByRole} = render(<K5Course {...defaultProps} />)
-      expect(queryByRole('button', {name: 'Manage'})).not.toBeInTheDocument()
+      expect(queryByRole('link', {name: 'Manage Subject'})).not.toBeInTheDocument()
     })
   })
 
@@ -248,6 +250,13 @@ describe('K-5 Subject Course', () => {
       const {findByText} = render(<K5Course {...defaultProps} defaultTab={TAB_IDS.GRADES} />)
       expect(await findByText('Total: 89.39%')).toBeInTheDocument()
     })
+
+    it('shows tab for LMGB if enabled', () => {
+      const {getByRole} = render(
+        <K5Course {...defaultProps} showLearningMasteryGradebook defaultTab={TAB_IDS.GRADES} />
+      )
+      expect(getByRole('tab', {name: 'Learning Mastery'})).toBeInTheDocument()
+    })
   })
 
   describe('resources tab', () => {
@@ -259,12 +268,12 @@ describe('K-5 Subject Course', () => {
       })
     })
 
-    it('shows a loading spinner while apps are loading', async () => {
-      const {getByText, queryByText} = render(
+    it('shows some loading skeletons while apps are loading', async () => {
+      const {getAllByText, queryByText} = render(
         <K5Course {...defaultProps} defaultTab={TAB_IDS.RESOURCES} />
       )
       await waitFor(() => {
-        expect(getByText('Loading apps...')).toBeInTheDocument()
+        expect(getAllByText('Loading apps...')[0]).toBeInTheDocument()
         expect(queryByText('Studio')).not.toBeInTheDocument()
       })
     })

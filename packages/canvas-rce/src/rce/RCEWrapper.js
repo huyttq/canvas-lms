@@ -202,13 +202,15 @@ class RCEWrapper extends React.Component {
     tinymce: PropTypes.object,
     trayProps: trayPropTypes,
     instRecordDisabled: PropTypes.bool,
+    highContrastCSS: PropTypes.arrayOf(PropTypes.string),
     use_rce_pretty_html_editor: PropTypes.bool
   }
 
   static defaultProps = {
     trayProps: null,
     languages: [{id: 'en', label: 'English'}],
-    autosave: {enabled: false}
+    autosave: {enabled: false},
+    highContrastCSS: []
   }
 
   static skinCssInjected = false
@@ -258,6 +260,15 @@ class RCEWrapper extends React.Component {
     alertHandler.alertFunc = this.addAlert
 
     this.handleContentTrayClosing = this.handleContentTrayClosing.bind(this)
+
+    this.a11yCheckerReady = import('./initA11yChecker')
+      .then(initA11yChecker => {
+        initA11yChecker.default(this.props.language, this.props.highContrastCSS)
+      })
+      .catch(err => {
+        // eslint-disable-next-line no-console
+        console.error('Failed initializing a11y checker', err)
+      })
   }
 
   // getCode and setCode naming comes from tinyMCE
@@ -818,7 +829,8 @@ class RCEWrapper extends React.Component {
       } else {
         bridge.hideTrays()
       }
-    } else if (event.key.match(/\w/)) {
+    } else if (['n', 'N', 'd', 'D'].indexOf(event.key) !== -1) {
+      // Prevent key events from bubbling up on touch screen device
       event.stopPropagation()
     }
   }
@@ -1175,7 +1187,10 @@ class RCEWrapper extends React.Component {
   }
 
   onA11yChecker = () => {
-    this.onTinyMCEInstance('openAccessibilityChecker', {skip_focus: true})
+    // eslint-disable-next-line promise/catch-or-return
+    this.a11yCheckerReady.then(() => {
+      this.onTinyMCEInstance('openAccessibilityChecker', {skip_focus: true})
+    })
   }
 
   openKBShortcutModal = () => {
