@@ -37,6 +37,7 @@ import 'jqueryui/dialog'
 import '@canvas/rails-flash-notifications'
 import 'jquery-scroll-to-visible/jquery.scrollTo'
 import '@canvas/quizzes/jquery/behaviors/quiz_selectmenu'
+import  SignaturePad from 'signature_pad'
 
 RichContentEditor.preloadRemoteModule()
 
@@ -961,9 +962,17 @@ $(function() {
   }, 15000)
 
   const $submit_buttons = $('#submit_quiz_form button[type=submit]')
+  const $signature_field = $('#submit_quiz_form input[name=signature]')
 
   // set the form action depending on the button clicked
   $submit_buttons.click(function(event) {
+    if ($signaturePad.isEmpty()) {
+      alert('You need to sign!', true);
+      event.preventDefault();
+      return;
+    }
+
+    $signature_field.val($signaturePad.toDataURL())
     quizSubmission.clearAccessCode = false
     const action = $(this).data('action')
     if (action != undefined) {
@@ -973,6 +982,17 @@ $(function() {
 
   // now that JS has been initialized, enable the next and previous buttons
   $submit_buttons.removeAttr('disabled')
+
+  const $signaturePad = new SignaturePad(document.getElementById('signature_pad'), {
+    backgroundColor: 'rgba(255, 255, 255, 0)',
+    penColor: 'rgb(0, 0, 0)'
+  });
+  const $cancelButton = document.getElementById('clear_signature');
+
+  $cancelButton.addEventListener('click', function (event) {
+    $signaturePad.clear();
+    event.preventDefault();
+  });
 })
 
 showDeauthorizedDialog = function() {

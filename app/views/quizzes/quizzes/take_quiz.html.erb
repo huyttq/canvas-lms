@@ -128,6 +128,16 @@
       <li>This assignment is my own work. I make this statement in full knowledge of and understanding that, should it be found to be false, I will be deemed Not Competent.</li>
       <li>I have attended and understood the Pre Assessment Briefing as conducted by my trainer.</li>
     </ul>
+    <div class="form-actions" style="border: none; margin: 0;">
+      <div style="text-align: left">
+        <p>Signature</p>
+        <input type="hidden" name="signature" value=""/>
+        <canvas id="signature_pad" class="signature-pad" width="400px" height="200px" style="border: 1px solid black;float:left"></canvas>
+        <div style="float:left">
+          <button class="btn submit_button" id="clear_signature" style="margin: 30px">Clear</button>
+        </div>
+      </div>
+    </div>
   </div>
   <div class=form-actions>
     <span id="last_saved_indicator"><%= t("not_saved", "Not saved") %></span>
