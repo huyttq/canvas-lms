@@ -973,7 +973,6 @@ $(function() {
         return;
       }
       const base64Signature = $signature_pad.toDataURL().split(',')[1];
-      console.log(base64Signature);
       $signature_field.val(base64Signature);
     }
 
