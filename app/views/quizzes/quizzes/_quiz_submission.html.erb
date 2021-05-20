@@ -137,7 +137,9 @@
 <% else %>
   <div id="update_scores">
 <% end %>
-
+<% if @submission.has_student_signature? %>
+  <div>Student Signature<img width="200px" height="100px" src="<%= @submission.attachments.first.public_url %>"/></div>
+<% end %>
 <% if editable %>
   <div class="update_scores_fudge">
     <label for="fudge_points_entry"><%= before_label(:fudge_points, "Fudge Points") %></label>
@@ -193,6 +195,7 @@
 <% end %>
 
 <% if !editable %>
+  
 <div class="quiz_score" style="text-align: <%= direction('right') %>; font-size: 1.2em; <%= hidden if @quiz.ungraded? %>">
   <% if @quiz.survey? %>
     <%= before_label(:survey_score, "Survey Score") %>

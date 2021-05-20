@@ -248,6 +248,20 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
     end
   end
 
+  def add_signature(base64_signature)
+    return if has_student_signature?
+    logger.debug "----------CREATE SIGNATURE: #{base64_signature}"
+    signature_attachment = Attachment.new
+    signature_attachment.context = self
+    signature_attachment.filename = 'student_signature.png'
+    signature_attachment.uploaded_data = StringIO.new(Base64.decode64 base64_signature)
+    signature_attachment.save!
+  end
+
+  def has_student_signature?
+    self.attachments.where('display_name LIKE ?', 'student_signature.%').exists?
+  end
+
   def data
     raise "Cannot view data for uncompleted quiz" unless self.completed?
     raise "Cannot view data for uncompleted quiz" if !graded?

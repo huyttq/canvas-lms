@@ -59,8 +59,14 @@ class Quizzes::QuizSubmissionsController < ApplicationController
         end
       end
 
+      if !@submission.has_student_signature? && !params[:signature]
+        flash[:error] = t('errors.invalid_submissions', "This quiz submission require valid signature")
+        return redirect_to course_quiz_url(@context, @quiz, previewing_params)
+      end
+
       sanitized_params = @submission.sanitize_params(params)
       @submission.snapshot!(sanitized_params)
+      @submission.add_signature(sanitized_params[:signature])
       if @submission.preview? || (@submission.untaken? && @submission.attempt == sanitized_params[:attempt].to_i)
         @submission.mark_completed
         hash = {}

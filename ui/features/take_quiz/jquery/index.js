@@ -966,13 +966,17 @@ $(function() {
 
   // set the form action depending on the button clicked
   $submit_buttons.click(function(event) {
-    if ($signaturePad.isEmpty()) {
-      alert('You need to sign!', true);
-      event.preventDefault();
-      return;
+    if ($signature_pad) {
+      if ($signature_pad.isEmpty()) {
+        alert('You need to sign!' + ENV.folder_id + '--' + ENV.current_user_id, true);
+        event.preventDefault();
+        return;
+      }
+      const base64Signature = $signature_pad.toDataURL().split(',')[1];
+      console.log(base64Signature);
+      $signature_field.val(base64Signature);
     }
 
-    $signature_field.val($signaturePad.toDataURL())
     quizSubmission.clearAccessCode = false
     const action = $(this).data('action')
     if (action != undefined) {
@@ -981,18 +985,21 @@ $(function() {
   })
 
   // now that JS has been initialized, enable the next and previous buttons
-  $submit_buttons.removeAttr('disabled')
+  $submit_buttons.removeAttr('disabled');
+  let $signature_pad = null;
+  const $signature_form = document.getElementById('signature_pad');
+  if ($signature_form) {
+    $signature_pad = new SignaturePad($signature_form, {
+      backgroundColor: 'rgba(255, 255, 255, 0)',
+      penColor: 'rgb(0, 0, 0)'
+    });
+    const $cancelButton = document.getElementById('clear_signature');
 
-  const $signaturePad = new SignaturePad(document.getElementById('signature_pad'), {
-    backgroundColor: 'rgba(255, 255, 255, 0)',
-    penColor: 'rgb(0, 0, 0)'
-  });
-  const $cancelButton = document.getElementById('clear_signature');
-
-  $cancelButton.addEventListener('click', function (event) {
-    $signaturePad.clear();
-    event.preventDefault();
-  });
+    $cancelButton.addEventListener('click', function (event) {
+      $signature_pad.clear();
+      event.preventDefault();
+    });
+  }
 })
 
 showDeauthorizedDialog = function() {
