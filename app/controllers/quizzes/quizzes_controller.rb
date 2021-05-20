@@ -381,6 +381,7 @@ class Quizzes::QuizzesController < ApplicationController
       #TODO: parameterize num of attempts
       @quiz.allowed_attempts = 3
       @quiz.show_correct_answers = false
+      @quiz.require_physical_signature = true
 
       return render_forbidden unless grading_periods_allow_submittable_create?(@quiz, params[:quiz])
       overrides = delete_override_params

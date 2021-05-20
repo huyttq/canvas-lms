@@ -53,6 +53,17 @@
 
     <div class="control-group">
       <div class="control-label">
+        <%= t("Require Physical Signature") %>
+      </div>
+      <div class="controls">
+        <span class="value">
+          <%= @quiz.require_physical_signature ? t('#options.yes', "Yes") : t('#options.no', "No") %>
+        </span>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <div class="control-label">
         <%= t(:shuffle_answers, "Shuffle Answers") %>
       </div>
       <div class="controls">

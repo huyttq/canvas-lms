@@ -98,6 +98,11 @@ content_is_locked = !!js_env.dig(:MASTER_COURSE_DATA, "is_master_course_child_co
               </label>
             <% end %>
 
+            <label class="checkbox" for="quiz_require_physical_signature">
+              <%= check_box :quiz, :require_physical_signature %>
+              <%= t("Require Physical Signature") %>
+            </label>
+
             <label class="checkbox" for="quiz_shuffle_answers">
               <%= check_box :quiz, :shuffle_answers %>
               <%= t("Shuffle Answers") %>

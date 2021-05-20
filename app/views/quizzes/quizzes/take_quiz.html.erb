@@ -128,20 +128,22 @@
       <li>This assignment is my own work. I make this statement in full knowledge of and understanding that, should it be found to be false, I will be deemed Not Competent.</li>
       <li>I have attended and understood the Pre Assessment Briefing as conducted by my trainer.</li>
     </ul>
-    <% if @submission.has_student_signature? %>
-    <div>Student Signature<img width="200px" height="100px" src="<%= @submission.attachments.first.public_url %>"/></div>
-    <% else %>
-    <div class="form-actions" style="border: none; margin: 0;">
-      <div style="text-align: left">
-        <p>Signature</p>
-        <p style="font-size: 12px"><i>Use mouse pointer or your finger (touch screen device) to draw your signature</i></p>
-        <input type="hidden" name="signature" value=""/>
-        <canvas id="signature_pad" class="signature-pad" width="400px" height="200px" style="border: 1px solid black;float:left"></canvas>
-        <div style="float:left">
-          <button class="btn submit_button" id="clear_signature" style="margin-left: 30px; margin-top: 164px">Clear Signature</button>
+    <% if @submission.require_physical_signature? %>
+      <% if @submission.has_student_signature? %>
+      <div>Student Signature<img width="200px" height="100px" src="<%= @submission.attachments.first.public_url %>"/></div>
+      <% else %>
+      <div class="form-actions" style="border: none; margin: 0;">
+        <div style="text-align: left">
+          <p>Signature</p>
+          <p style="font-size: 12px"><i>Use mouse pointer or your finger (touch screen device) to draw your signature</i></p>
+          <input type="hidden" name="signature" value=""/>
+          <canvas id="signature_pad" class="signature-pad" width="400px" height="200px" style="border: 1px solid black;float:left"></canvas>
+          <div style="float:left">
+            <button class="btn submit_button" id="clear_signature" style="margin-left: 30px; margin-top: 164px">Clear Signature</button>
+          </div>
         </div>
       </div>
-    </div>
+      <% end %>
     <% end %>
   </div>
   <div class=form-actions>

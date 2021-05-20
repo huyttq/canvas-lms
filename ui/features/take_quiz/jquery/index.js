@@ -968,7 +968,7 @@ $(function() {
   $submit_buttons.click(function(event) {
     if ($signature_pad) {
       if ($signature_pad.isEmpty()) {
-        alert('You need to sign!' + ENV.folder_id + '--' + ENV.current_user_id, true);
+        alert('You need to sign first!', true);
         event.preventDefault();
         return;
       }

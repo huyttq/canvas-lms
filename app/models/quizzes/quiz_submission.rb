@@ -248,6 +248,10 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
     end
   end
 
+  def require_physical_signature?
+    self.quiz.require_physical_signature
+  end
+
   def add_signature(base64_signature)
     return if has_student_signature?
     logger.debug "----------CREATE SIGNATURE: #{base64_signature}"
