@@ -2,6 +2,7 @@
   {{#each submissions}}
     {{#if ../showSubmissionStatus}}
       {{#t "submitted"}}<label>Submitted:</label> {{submittedAt}}{{/t}}
+      {{#t "graded"}}<br/><label>Marked:</label> {{gradedAt}}{{/t}}
     {{/if}}
     {{#if late}}
       <span class="submission-late-pill"></span>
@@ -21,7 +22,7 @@
               {{#if late}}class=late{{/if}}
               {{#if selected}}selected{{/if}}>
         {{#if ../showSubmissionStatus}}
-          {{submittedAt}}
+          {{submittedAt}} - Marked {{gradedAt}}
         {{else}}
           {{#t}}Submission {{_index}}{{/t}}
         {{/if}}

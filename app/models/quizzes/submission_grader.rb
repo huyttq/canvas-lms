@@ -43,8 +43,8 @@ module Quizzes
             last_submission = lastAttempt.submission_data
 
             sd = last_submission.find {|k| k["question_id"] == user_answer[:question_id]}
-            if !sd.nil? && sd["points"] > 0
-              Rails.logger.debug "------------COPY SCORE! FROM #{sd.inspect}"
+            if !sd.nil? && sd["points"] >= q["points_possible"]
+              Rails.logger.debug "------------COPY SCORE! FROM #{sd.inspect} #{q.inspect}"
               Rails.logger.debug "------------COPY SCORE! TO #{user_answer.inspect}"
               user_answer[:points] = sd["points"]
               user_answer[:correct] = sd["correct"]

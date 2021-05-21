@@ -35,7 +35,7 @@ module SpeedGrader
 
     def json
       Attachment.skip_thumbnails = true
-      submission_json_fields = %i(id submitted_at workflow_state grade
+      submission_json_fields = %i(id submitted_at graded_at workflow_state grade
                                   grade_matches_current_submission graded_at turnitin_data
                                   submission_type score points_deducted assignment_id submission_comments
                                   grading_period_id excused updated_at attempt posted_at resource_link_lookup_uuid
@@ -262,7 +262,7 @@ module SpeedGrader
             # don't use v.model, because these are huge objects, and can be significantly expensive
             # to instantiate an actual AR object deserializing and reserializing the inner YAML
             qs = YAML.load(v.yaml)
-
+            sh = sub.submission_history.find {|h| h.attempt == v.number}
             # Returns the id of the Submission, but this may be too ambiguous.
             # In the future, we may want to return both a quiz_id and a
             # submission_id and let clients handle it themselves.
@@ -271,6 +271,7 @@ module SpeedGrader
                 id: sub.id,
                 show_grade_in_dropdown: true,
                 submitted_at: qs['finished_at'],
+                graded_at: sh.nil? ? nil : sh.graded_at,
                 late: Quizzes::QuizSubmission.late_from_attributes?(qs, assignment.quiz, sub),
                 version: v.number,
               }}

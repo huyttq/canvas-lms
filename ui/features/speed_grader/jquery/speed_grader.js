@@ -2218,11 +2218,14 @@ EG = {
     let s = this.currentStudent.submission
     let submissionHistory
     let noSubmittedAt
+    let noGradedAt
     let selectedIndex
+    console.log(this.currentStudent);
 
     if (s && s.submission_history && s.submission_history.length > 0) {
       submissionHistory = s.submission_history
       noSubmittedAt = I18n.t('no_submission_time', 'no submission time')
+      noGradedAt = 'N/A'
       selectedIndex = parseInt($('#submission_to_view').val() || submissionHistory.length - 1, 10)
       const templateSubmissions = _(submissionHistory).map((o, i) => {
         // The submission objects nested in the submission_history array
@@ -2261,13 +2264,14 @@ EG = {
         if (s.grade && (s.grade_matches_current_submission || s.show_grade_in_dropdown)) {
           grade = GradeFormatHelper.formatGrade(s.grade)
         }
-
+        console.log(s);
         return {
           value: i,
           late: s.late,
           missing: s.missing,
           selected: selectedIndex === i,
           submittedAt: $.datetimeString(s.submitted_at) || noSubmittedAt,
+          gradedAt: $.datetimeString(s.graded_at) || noGradedAt,
           grade
         }
       })
