@@ -258,11 +258,12 @@ module SpeedGrader
             end
           end
         elsif assignment.quiz && sub.quiz_submission
+          lastAttemptBeforeGraded = sub.graded? ? sub.attempt : sub.attempt - 1
           json['submission_history'] = qs_versions[sub.quiz_submission.id].map do |v|
             # don't use v.model, because these are huge objects, and can be significantly expensive
             # to instantiate an actual AR object deserializing and reserializing the inner YAML
             qs = YAML.load(v.yaml)
-            sh = sub.submission_history.find {|h| h.attempt == v.number}
+            sh = sub.submission_history.find {|h| h.attempt == qs['attempt'] && h.attempt <= lastAttemptBeforeGraded}
             # Returns the id of the Submission, but this may be too ambiguous.
             # In the future, we may want to return both a quiz_id and a
             # submission_id and let clients handle it themselves.
@@ -270,7 +271,7 @@ module SpeedGrader
                 grade: qs['score'],
                 id: sub.id,
                 show_grade_in_dropdown: true,
-                submitted_at: qs['finished_at'],
+                submitted_at: sh.nil? ? qs['finished_at'] : sh.submitted_at,
                 graded_at: sh.nil? ? nil : sh.graded_at,
                 late: Quizzes::QuizSubmission.late_from_attributes?(qs, assignment.quiz, sub),
                 version: v.number,
