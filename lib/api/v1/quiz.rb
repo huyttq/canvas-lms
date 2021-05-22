@@ -40,6 +40,7 @@ module Api::V1::Quiz
       points_possible
       published
       quiz_type
+      require_physical_signature
       require_lockdown_browser
       require_lockdown_browser_for_results
       require_lockdown_browser_monitor
