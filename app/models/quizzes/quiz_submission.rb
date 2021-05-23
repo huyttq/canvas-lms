@@ -280,7 +280,7 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
 
   def get_grader(version)
     submission_version = self.submission.submission_history.detect {|h| h.attempt >= version }
-    submission_version.grader
+    submission_version&.grader
   end
 
   def data
