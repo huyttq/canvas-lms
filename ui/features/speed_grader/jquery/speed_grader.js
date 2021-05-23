@@ -2219,7 +2219,6 @@ EG = {
     let submissionHistory
     let noSubmittedAt
     let selectedIndex
-    console.log(this.currentStudent);
 
     if (s && s.submission_history && s.submission_history.length > 0) {
       submissionHistory = s.submission_history
@@ -2262,7 +2261,6 @@ EG = {
         if (s.grade && (s.grade_matches_current_submission || s.show_grade_in_dropdown)) {
           grade = GradeFormatHelper.formatGrade(s.grade)
         }
-        console.log(s);
         return {
           value: i,
           late: s.late,
