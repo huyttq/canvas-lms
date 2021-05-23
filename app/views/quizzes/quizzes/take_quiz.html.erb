@@ -130,7 +130,7 @@
     </ul>
     <% if @submission.require_physical_signature? %>
       <% if @submission.has_student_signature? %>
-      <div>Student Signature<img width="200px" height="100px" src="<%= @submission.attachments.first.public_url %>"/></div>
+      <div>Student Signature<img width="200px" height="100px" src="<%= @submission.student_signature&.public_url %>"/></div>
       <% else %>
       <div class="form-actions" style="border: none; margin: 0;">
         <div style="text-align: left">
