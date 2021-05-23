@@ -132,6 +132,12 @@ module Api::V1::Submission
       hash['anonymous_id'] = submission.anonymous_id
     end
 
+    if submission.quiz_submission&.require_physical_signature?
+      hash['signature_url_student'] = submission.quiz_submission&.student_signature&.public_url
+      hash['signature_url_grader'] = submission.grader&.signature&.public_url
+      hash['grader_name'] = submission.grader&.name
+    end
+
     hash
   end
 
