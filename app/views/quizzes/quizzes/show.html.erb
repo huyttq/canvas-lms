@@ -396,6 +396,8 @@
           <div class="lock_explanation">
             <%= lock_explanation(@locked_reason, 'quiz', @context) %>
           </div>
+        <% elsif @submission.satisfactory? %>
+          <p style="text-align: center"><%= t("SATISFACTORY") %></p>
         <% end %>
       <% end %>
     <% elsif !can_do(@quiz, @current_user, :update) %>
