@@ -24,6 +24,7 @@ import '@canvas/jquery/jquery.instructure_misc_plugins' /* fragmentChange */
 import '@canvas/util/templateData'
 import 'jquery-scroll-to-visible/jquery.scrollTo'
 import '@canvas/quizzes/jquery/behaviors/quiz_selectmenu'
+import SignaturePad from 'signature_pad'
 
 const parentWindow = {
   exists() {
@@ -175,7 +176,7 @@ function getQuizNavBar() {
     navItemWidth: 34,
 
     initialize() {
-      $('.user_points > .question_input').each(function(_index) {
+      $('.user_points > .question_input').each(function (_index) {
         quizNavBar.updateStatusFor($(this))
       })
 
@@ -339,11 +340,11 @@ function getQuizNavBar() {
   return (_quizNavBar = quizNavBar)
 }
 
-$(document).ready(function() {
+$(document).ready(function () {
   const scoringSnapshot = getScoringSnapshot()
   const gradingForm = getGradingForm()
   const quizNavBar = getQuizNavBar()
-  const onInputChange = function(eventObj) {
+  const onInputChange = function (eventObj) {
     const $question = eventObj.parents('.display_question')
     gradingForm.updateSnapshotFor($question)
     if (eventObj.hasClass('question_input')) {
@@ -361,7 +362,7 @@ $(document).ready(function() {
     $(document).scroll(quizNavBar.onScroll)
     gradingForm.onWindowResize()
 
-    $('.question_holder').click(function() {
+    $('.question_holder').click(function () {
       $('.quiz-nav li').removeClass('active')
       $('.question').removeClass('selected_single_question')
 
@@ -392,11 +393,11 @@ $(document).ready(function() {
 
   $(
     '.question_holder .user_points .question_input,.question_holder .question_neutral_comment .question_comment_text textarea'
-  ).change(function() {
+  ).change(function () {
     onInputChange($(this))
   })
 
-  $('#fudge_points_entry').change(function() {
+  $('#fudge_points_entry').change(function () {
     const points = numberHelper.parse($(this).val())
     const parsed = numberHelper.parse($(this).val())
     const hiddenVal = Number.isNaN(parsed) ? '' : parsed
@@ -406,7 +407,7 @@ $(document).ready(function() {
 
   $(document).bind('score_changed', gradingForm.onScoreChanged)
 
-  $('.question-nav-link').click(function(e) {
+  $('.question-nav-link').click(function (e) {
     e.preventDefault()
     const questionId = $(this).attr('data-id')
     scoringSnapshot.jumpToQuestion(questionId)
@@ -432,5 +433,36 @@ $(document).ready(function() {
     if (parentWindow.respondsTo('refreshGrades')) {
       window.parent.INST.refreshGrades()
     }
+  }
+
+  const $signature_form = document.getElementById('signature_pad')
+  let $signature_pad = null
+
+  if ($signature_form) {
+    $signature_pad = new SignaturePad($signature_form, {
+      backgroundColor: 'rgba(255, 255, 255, 0)',
+      penColor: 'rgb(0, 0, 0)'
+    })
+    const $cancelButton = document.getElementById('clear_signature')
+
+    $cancelButton.addEventListener('click', function (event) {
+      $signature_pad.clear()
+      event.preventDefault()
+    })
+
+    const $updateScoreButton = document.getElementById('button_update_score')
+    const $signature_field = $('input[name=marker_signature]')
+
+    $updateScoreButton.addEventListener('click', function (event) {
+      if ($signature_pad) {
+        if ($signature_pad.isEmpty()) {
+          alert('You need to sign first!', true)
+          event.preventDefault()
+          return
+        }
+        const base64Signature = $signature_pad.toDataURL().split(',')[1]
+        $signature_field.val(base64Signature)
+      }
+    })
   }
 })

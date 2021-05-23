@@ -234,6 +234,7 @@ class Quizzes::QuizzesController < ApplicationController
           events_url = api_v1_course_quiz_submission_events_url(@context, @quiz, @submission)
           js_env QUIZ_SUBMISSION_EVENTS_URL: events_url
         end
+        @assessor_signature = @submission.grader_signature
       end
 
       setup_attachments
@@ -738,6 +739,10 @@ class Quizzes::QuizzesController < ApplicationController
         end
 
         log_asset_access(@quiz, "quizzes", 'quizzes')
+        @assessor_signature = @submission.get_grader(params[:version].to_i)&.signature
+        if @submission.needs_grading?
+          @assessor_signature = @current_user&.signature
+        end
 
         if @quiz.require_lockdown_browser? && @quiz.require_lockdown_browser_for_results? && params[:viewing]
           return unless check_lockdown_browser(:medium, named_context_url(@context, 'context_quiz_history_url', @quiz.to_param, :viewing => "1", :version => params[:version]))

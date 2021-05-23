@@ -266,6 +266,23 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
     self.attachments.where('display_name LIKE ?', 'student_signature.%').exists?
   end
 
+  def student_signature
+    self.attachments.where('display_name LIKE ?', 'student_signature.%').first
+  end
+
+  def has_grader_signature?
+    self.submission&.grader&.has_signature?
+  end
+
+  def grader_signature
+    self.submission&.grader&.signature
+  end
+
+  def get_grader(version)
+    submission_version = self.submission.submission_history.detect {|h| h.attempt >= version }
+    submission_version.grader
+  end
+
   def data
     raise "Cannot view data for uncompleted quiz" unless self.completed?
     raise "Cannot view data for uncompleted quiz" if !graded?
@@ -536,6 +553,7 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
         @assignment_submission.posted_at = @assignment_submission.graded_at
       end
     end
+    logger.debug "---------------------update_assignment_submission: #{@assignment_submission.inspect}"
   end
 
   def save_assignment_submission

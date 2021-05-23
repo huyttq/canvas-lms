@@ -3138,4 +3138,26 @@ class User < ActiveRecord::Base
   def pronouns=(pronouns)
     write_attribute(:pronouns, untranslate_pronouns(pronouns))
   end
+
+  def save_signature(base64_signature)
+    if has_signature?
+      currentSignature = self.signature
+      currentSignature.uploaded_data = StringIO.new(Base64.decode64 base64_signature)
+      currentSignature.save!
+    else
+      signature_attachment = Attachment.new
+      signature_attachment.context = self
+      signature_attachment.filename = 'user_signature.png'
+      signature_attachment.uploaded_data = StringIO.new(Base64.decode64 base64_signature)
+      signature_attachment.save!
+    end
+  end
+
+  def has_signature?
+    self.attachments.where('display_name LIKE ?', 'user_signature.%').exists?
+  end
+
+  def signature
+    self.attachments.where('display_name LIKE ?', 'user_signature.%').first
+  end
 end

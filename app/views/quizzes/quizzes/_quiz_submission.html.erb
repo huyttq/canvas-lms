@@ -137,8 +137,24 @@
 <% else %>
   <div id="update_scores">
 <% end %>
-<% if @submission.has_student_signature? %>
-  <div>Student Signature<img width="200px" height="100px" src="<%= @submission.attachments.first.public_url %>"/></div>
+<% if @submission.require_physical_signature? %>
+  <% if @submission.has_student_signature? %>
+    <div>Student Signature<img width="200px" height="100px" src="<%= @submission.student_signature.public_url %>"/></div>
+  <% end %>
+  <div style="text-align: left; margin-bottom: 20px">
+    <% if !@assessor_signature.nil? %>
+      <div>Trainer/Assessor Signature<img width="200px" height="100px" src="<%= @assessor_signature.public_url %>"/></div>
+    <% elsif editable && @submission.needs_grading? %>
+      <p>Trainer/Assessor Signature</p>
+      <p style="font-size: 12px"><i>Use mouse pointer or your finger (touch screen device) to draw your signature</i></p>
+      <input type="hidden" name="marker_signature" value=""/>
+      <canvas id="signature_pad" class="signature-pad" width="400px" height="200px" style="border: 1px solid black;float:left"></canvas>
+      <div style="float:left">
+        <button class="btn submit_button" id="clear_signature" style="margin-left: 30px; margin-top: 164px">Clear Signature</button>
+      </div>
+    <% end %>
+    <div style="clear:both"></div>
+  </div>
 <% end %>
 <% if editable %>
   <div class="update_scores_fudge">
@@ -185,7 +201,7 @@
   </div>
   <div class="update_scores">
     <div class="button-container">
-      <button type="submit" class="btn btn-primary update-scores"><%= t('buttons.update_scores', "Update Scores") %></button>
+      <button id="button_update_score" type="submit" class="btn btn-primary update-scores"><%= t('buttons.update_scores', "Update Scores") %></button>
     </div>
   </div>
   <div class="update_scores_final_score">
