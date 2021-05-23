@@ -740,7 +740,7 @@ class Quizzes::QuizzesController < ApplicationController
 
         log_asset_access(@quiz, "quizzes", 'quizzes')
         @assessor_signature = @submission.get_grader(params[:version].to_i)&.signature
-        if @submission.needs_grading?
+        if @submission.pending_review?
           @assessor_signature = @current_user&.signature
         end
 

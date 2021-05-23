@@ -144,7 +144,7 @@
   <div style="text-align: left; margin-bottom: 20px">
     <% if !@assessor_signature.nil? %>
       <div>Trainer/Assessor Signature<img width="200px" height="100px" src="<%= @assessor_signature.public_url %>"/></div>
-    <% elsif editable && @submission.needs_grading? %>
+    <% elsif editable && @submission.pending_review? %>
       <p>Trainer/Assessor Signature</p>
       <p style="font-size: 12px"><i>Use mouse pointer or your finger (touch screen device) to draw your signature</i></p>
       <input type="hidden" name="marker_signature" value=""/>
