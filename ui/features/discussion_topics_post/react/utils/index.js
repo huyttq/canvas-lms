@@ -22,7 +22,7 @@ import {DISCUSSION_SUBENTRIES_QUERY} from '../../graphql/Queries'
 import {PER_PAGE} from './constants'
 
 export const isGraded = (assignment = null) => {
-  return assignment !== null && (assignment?.dueAt || assignment?.pointsPossible)
+  return assignment !== null
 }
 
 export const getSpeedGraderUrl = (courseId, assignmentId, authorId = null) => {
@@ -37,6 +37,10 @@ export const getSpeedGraderUrl = (courseId, assignmentId, authorId = null) => {
 
 export const getEditUrl = (courseId, discussionTopicId) => {
   return `/courses/${courseId}/discussion_topics/${discussionTopicId}/edit`
+}
+
+export const getGroupDiscussionUrl = (groupId, childDiscussionId) => {
+  return `/groups/${groupId}/discussion_topics/${childDiscussionId}`
 }
 
 export const addReplyToDiscussion = (cache, discussionTopicGraphQLId) => {
@@ -99,7 +103,6 @@ export const addReplyToSubentries = (cache, discussionEntryId, newDiscussionEntr
       const subentriesLegacyNode = currentSubentries.legacyNode
       subentriesLegacyNode.subentriesCount += 1
 
-      // TODO: Handle sorting.
       subentriesLegacyNode.discussionSubentriesConnection.nodes.push(newDiscussionEntry)
 
       cache.writeQuery({...options, data: currentSubentries})

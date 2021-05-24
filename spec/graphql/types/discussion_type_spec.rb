@@ -186,6 +186,10 @@ describe Types::DiscussionType do
     expect(discussion_type.resolve("modules { _id }").sort).to eq [module1.id.to_s, module2.id.to_s]
   end
 
+  it "has a group_set" do
+    expect(discussion_type.resolve('groupSet { name }')).to eq "category"
+  end
+
   context 'graded discussion' do
     it 'allows querying the assignment type on a discussion' do
       Assignment::ALLOWED_GRADING_TYPES.each do |grading_type|
@@ -225,19 +229,19 @@ describe Types::DiscussionType do
     end
 
     it "by any workflow state" do
-      result = discussion_type.resolve('discussionEntriesConnection(filter:All) { nodes { message } }')
+      result = discussion_type.resolve('discussionEntriesConnection(filter:all) { nodes { message } }')
       expect(result.count).to be 2
     end
 
     it "by unread workflow state" do
-      result = discussion_type.resolve('discussionEntriesConnection(filter:Unread) { nodes { message } }')
+      result = discussion_type.resolve('discussionEntriesConnection(filter:unread) { nodes { message } }')
       expect(result.count).to be 1
       expect(result[0]).to eq @de2.message
     end
 
     it "by deleted workflow state" do
       @de2.destroy
-      result = discussion_type.resolve('discussionEntriesConnection(filter:Deleted) { nodes { deleted } }')
+      result = discussion_type.resolve('discussionEntriesConnection(filter:deleted) { nodes { deleted } }')
 
       expect(result.count).to be 1
       expect(result[0]).to eq true

@@ -1329,10 +1329,13 @@ The submission history LTI2 service endpoint.
 ## com.instructure.Course.accept_canvas_resource_types
 Returns the types of resources that can be imported to the current page, forwarded from the request.
 Value is a comma-separated array of one or more values of: ["assignment", "assignment_group", "audio",
-"discussion_topic", "document", "image", "module", "quiz", "page", "video"].
+"discussion_topic", "document", "image", "module", "quiz", "page", "video"]
+
+Only functional when `com_instructure_course_accept_canvas_resource_types` is included as a query param
+in Canvas-side GET request that triggers the LTI launch.
 
 **Availability**: *always*  
-**Launch Parameter**: *com_instructure_course_accept_canvas_resource_types*  
+
 
 ```
 "page"
@@ -1347,8 +1350,11 @@ Value is the largest logical unit of the page. Possible values are: ["assignment
   on Modules -> 'module'
   and so on.
 
+Only functional when `com_instructure_course_canvas_resource_type` is included as a query param
+in Canvas-side GET request that triggers the LTI launch.
+
 **Availability**: *always*  
-**Launch Parameter**: *com_instructure_course_canvas_resource_type*  
+
 
 ```
 page
@@ -1357,8 +1363,11 @@ page
 Returns whether a content can be imported into a specific group on the page, forwarded from the request.
 True for Modules page and Assignment Groups page. False for other content index pages.
 
+Only functional when `com_instructure_course_allow_canvas_resource_selection` is included as a query param
+in Canvas-side GET request that triggers the LTI launch.
+
 **Availability**: *always*  
-**Launch Parameter**: *com_instructure_course_allow_canvas_resource_selection*  
+
 
 ```
 true
@@ -1368,8 +1377,11 @@ Returns a JSON-encoded list of content groups which can be selected, providing I
 forwarded from the request.
 Empty value if com.instructure.Course.allow_canvas_resource_selection is false.
 
+Only functional when `com_instructure_course_available_canvas_resources` is included as a query param
+in Canvas-side GET request that triggers the LTI launch.
+
 **Availability**: *always*  
-**Launch Parameter**: *com_instructure_course_available_canvas_resources*  
+
 
 ```
 [{"id":"3","name":"First Module"},{"id":"5","name":"Second Module"}]

@@ -95,7 +95,8 @@ describe('DiscussionThreadContainer', () => {
           read: true,
           reply: true,
           update: true,
-          viewRating: true
+          viewRating: true,
+          speedGrader: true
         },
         ...discussionEntryOverrides
       },
@@ -265,7 +266,7 @@ describe('DiscussionThreadContainer', () => {
   })
 
   describe('SpeedGrader', () => {
-    it('Should be able to open SpeedGrader', async () => {
+    it('Should be able to open SpeedGrader when speedGrader permission is true', async () => {
       const {getByTestId} = setup(
         defaultProps({
           assignment: {
@@ -284,15 +285,27 @@ describe('DiscussionThreadContainer', () => {
       })
     })
 
-    it('Should not be able to open SpeedGrader if is not an assignment', () => {
-      const {getByTestId, queryByTestId} = setup(
-        defaultProps({
-          assignment: null
-        })
-      )
+    it('Should not be able to open SpeedGrader if is speedGrader permission is false', () => {
+      const {getByTestId, queryByTestId} = setup({
+        discussionEntry: DiscussionEntry.mock({permissions: {speedGrader: false}})
+      })
 
       fireEvent.click(getByTestId('thread-actions-menu'))
       expect(queryByTestId('inSpeedGrader')).toBeNull()
+    })
+  })
+
+  describe('Go to Buttons', () => {
+    it('Should call scrollTo when go to topic is pressed', async () => {
+      window.scrollTo = jest.fn()
+      const {getByTestId} = setup(defaultProps())
+
+      fireEvent.click(getByTestId('thread-actions-menu'))
+      fireEvent.click(getByTestId('toTopic'))
+
+      await waitFor(() => {
+        expect(window.scrollTo.mock.calls.length).toBe(1)
+      })
     })
   })
 })

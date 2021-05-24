@@ -18,6 +18,7 @@
 
 import React from 'react'
 import I18n from 'i18n!k5_dashboard'
+import tz from '@canvas/timezone'
 import PropTypes from 'prop-types'
 
 import {Heading} from '@instructure/ui-heading'
@@ -31,7 +32,7 @@ import {PresentationContent} from '@instructure/ui-a11y-content'
 
 import apiUserContent from '@canvas/util/jquery/apiUserContent'
 
-export default function HomeroomAnnouncement({
+export default function K5Announcement({
   title,
   message,
   url,
@@ -39,12 +40,40 @@ export default function HomeroomAnnouncement({
   courseUrl,
   canEdit,
   attachment,
-  published
+  published,
+  postedDate,
+  showCourseDetails
 }) {
+  const renderWithEditButton = content => (
+    <Flex alignItems="center" justifyItems="space-between" margin="medium 0 0">
+      <Flex.Item>{content}</Flex.Item>
+      {canEdit && (
+        <Flex.Item>
+          <IconButton
+            screenReaderLabel={I18n.t('Edit announcement %{title}', {
+              title
+            })}
+            withBackground={false}
+            withBorder={false}
+            href={`${url}/edit`}
+          >
+            <IconEditLine />
+          </IconButton>
+        </Flex.Item>
+      )}
+    </Flex>
+  )
+
+  const renderAnnouncementTitle = () => (
+    <Heading level="h3" margin="x-small 0 0">
+      {title}
+    </Heading>
+  )
+
   return (
     <View>
-      <Flex alignItems="center" justifyItems="space-between" margin="medium 0 0">
-        <Flex.Item>
+      {showCourseDetails &&
+        renderWithEditButton(
           <Heading level="h3" as="h2">
             {canEdit ? (
               <Link href={courseUrl} isWithinText={false}>
@@ -54,30 +83,21 @@ export default function HomeroomAnnouncement({
               courseName
             )}
           </Heading>
-        </Flex.Item>
-        {canEdit && (
-          <Flex.Item>
-            <IconButton
-              screenReaderLabel={I18n.t('Edit announcement %{title}', {
-                title
-              })}
-              withBackground={false}
-              withBorder={false}
-              href={`${url}/edit`}
-            >
-              <IconEditLine />
-            </IconButton>
-          </Flex.Item>
         )}
-      </Flex>
-
       <View>
-        {!published && (
+        {!published && showCourseDetails && (
           <Text size="small">{I18n.t('Your homeroom is currently unpublished.')}</Text>
         )}
-        <Heading level="h3" margin="x-small 0 0">
-          {title}
-        </Heading>
+        {showCourseDetails
+          ? renderAnnouncementTitle()
+          : renderWithEditButton(renderAnnouncementTitle())}
+        {postedDate && (
+          <Text as="div" size="small" color="secondary">
+            {I18n.t('Posted on %{date}', {
+              date: tz.format(postedDate, 'date.formats.full_with_weekday')
+            })}
+          </Text>
+        )}
         <div
           className="user_content"
           /* html sanitized by server */
@@ -105,13 +125,15 @@ export default function HomeroomAnnouncement({
   )
 }
 
-HomeroomAnnouncement.propTypes = {
-  courseName: PropTypes.string.isRequired,
-  courseUrl: PropTypes.string.isRequired,
+K5Announcement.propTypes = {
+  courseName: PropTypes.string,
+  courseUrl: PropTypes.string,
   canEdit: PropTypes.bool.isRequired,
   title: PropTypes.string.isRequired,
   message: PropTypes.node.isRequired,
   url: PropTypes.string.isRequired,
   attachment: PropTypes.object,
-  published: PropTypes.bool.isRequired
+  published: PropTypes.bool,
+  postedDate: PropTypes.string,
+  showCourseDetails: PropTypes.bool.isRequired
 }

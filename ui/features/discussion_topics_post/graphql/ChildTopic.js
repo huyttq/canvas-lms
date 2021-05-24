@@ -16,25 +16,36 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import I18n from 'i18n!account_settings_jsx_bundle'
-import {Button} from '@instructure/ui-buttons'
-import {IconUploadLine} from '@instructure/ui-icons'
-import React from 'react'
-import PropTypes from 'prop-types'
+import gql from 'graphql-tag'
+import {shape, string} from 'prop-types'
 
-export default function UpdateSettingsButton(props) {
-  return (
-    <Button
-      renderIcon={IconUploadLine}
-      color="primary"
-      onClick={props.handleClick}
-      margin="small 0 small 0"
-    >
-      {I18n.t('Update Settings')}
-    </Button>
-  )
-}
+export const ChildTopic = {
+  fragment: gql`
+    fragment ChildTopic on Discussion {
+      id
+      _id
+      contextName
+      contextId
+    }
+  `,
 
-UpdateSettingsButton.propTypes = {
-  handleClick: PropTypes.func
+  shape: shape({
+    id: string,
+    _id: string,
+    contextName: string,
+    contextId: string
+  }),
+
+  mock: ({
+    id = 'QXNzaWdubWVudC0x22',
+    _id = '1',
+    contextName = 'Super Group',
+    contextId = '5'
+  } = {}) => ({
+    id,
+    _id,
+    contextId,
+    contextName,
+    __typename: 'ChildTopic'
+  })
 }

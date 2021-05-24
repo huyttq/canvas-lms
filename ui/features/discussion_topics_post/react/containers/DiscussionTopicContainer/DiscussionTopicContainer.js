@@ -47,7 +47,7 @@ export const DiscussionTopicContainer = ({createDiscussionEntry, ...props}) => {
   const [copyToOpen, setCopyToOpen] = useState(false)
   const [expandedReply, setExpandedReply] = useState(false)
 
-  const {setSearchTerm} = useContext(SearchContext)
+  const {setSearchTerm, filter, setFilter, sort, setSort} = useContext(SearchContext)
 
   const discussionTopicData = {
     _id: props.discussionTopic._id,
@@ -61,7 +61,9 @@ export const DiscussionTopicContainer = ({createDiscussionEntry, ...props}) => {
     title: props.discussionTopic?.title || '',
     unread: props.discussionTopic?.entryCounts?.unreadCount,
     replies: props.discussionTopic?.entryCounts?.repliesCount,
-    assignment: props.discussionTopic?.assignment
+    assignment: props.discussionTopic?.assignment,
+    childTopics: props.discussionTopic?.childTopics || [],
+    groupSet: props.discussionTopic?.groupSet || false
   }
 
   // TODO: Change this to the new canGrade permission.
@@ -77,6 +79,11 @@ export const DiscussionTopicContainer = ({createDiscussionEntry, ...props}) => {
   const canCopyAndSendTo = discussionTopicData?.permissions?.copyAndSendTo
   const canModerate = discussionTopicData?.permissions?.moderateForum
   const canUnpublish = props.discussionTopic.canUnpublish
+  // TODO: add check for childTopics
+  const canSeeGroupsMenu =
+    discussionTopicData?.permissions?.readAsAdmin &&
+    discussionTopicData?.childTopics.length > 0 &&
+    discussionTopicData?.groupSet
 
   if (isGraded(discussionTopicData.assignment)) {
     discussionTopicData.dueAt = DateHelper.formatDatetimeForDiscussions(
@@ -177,17 +184,26 @@ export const DiscussionTopicContainer = ({createDiscussionEntry, ...props}) => {
     setSearchTerm(value)
   }
 
+  const onViewFilter = (_event, value) => {
+    setFilter(value.value)
+  }
+
+  const onSortClick = () => {
+    sort === 'asc' ? setSort('desc') : setSort('asc')
+  }
+
   return (
     <>
       <div style={{position: 'sticky', top: 0, zIndex: 10, marginTop: '-24px'}}>
         <View as="div" padding="medium 0" background="primary">
           <DiscussionPostToolbar
-            selectedView="all"
-            sortDirection="asc"
+            childTopics={canSeeGroupsMenu ? discussionTopicData.childTopics : null}
+            selectedView={filter}
+            sortDirection={sort}
             isCollapsedReplies
             onSearchChange={onSearchChange}
-            onViewFilter={() => {}}
-            onSortClick={() => {}}
+            onViewFilter={onViewFilter}
+            onSortClick={onSortClick}
             onCollapseRepliesToggle={() => {}}
             onTopClick={() => {}}
           />
@@ -205,7 +221,6 @@ export const DiscussionTopicContainer = ({createDiscussionEntry, ...props}) => {
             {isGraded(discussionTopicData.assignment) && (
               <View as="div" padding="none medium none">
                 <Alert
-                  contextDisplayText="Section 2"
                   dueAtDisplayText={discussionTopicData.dueAt}
                   pointsPossible={discussionTopicData.pointsPossible}
                 />
@@ -223,7 +238,6 @@ export const DiscussionTopicContainer = ({createDiscussionEntry, ...props}) => {
                     <PostMessage
                       authorName={discussionTopicData.authorName}
                       avatarUrl={discussionTopicData.avatarUrl}
-                      pillText={I18n.t('Author')}
                       timingDisplay={discussionTopicData.postedAt}
                       title={discussionTopicData.title}
                       message={discussionTopicData.message}

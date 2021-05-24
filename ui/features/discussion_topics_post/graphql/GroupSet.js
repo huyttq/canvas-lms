@@ -16,24 +16,25 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import {fireEvent, render} from '@testing-library/react'
-import React from 'react'
-import UpdateSettingsButton from '../components/UpdateSettingsButton'
+import gql from 'graphql-tag'
+import {shape, string} from 'prop-types'
 
-describe('UpdateSettingsButton', () => {
-  const handleClickMock = jest.fn()
+export const GroupSet = {
+  fragment: gql`
+    fragment GroupSet on GroupSet {
+      id
+      _id
+    }
+  `,
 
-  const setup = () => {
-    return render(<UpdateSettingsButton handleClick={handleClickMock} />)
-  }
-  it('renders without errors', () => {
-    const container = setup()
-    expect(container.error).toBeFalsy()
+  shape: shape({
+    id: string,
+    _id: string
+  }),
+
+  mock: ({id = 'QXNzaWHGVJBkn0x22', _id = '1'} = {}) => ({
+    id,
+    _id,
+    __typename: 'GroupSet'
   })
-
-  it('calls the passed in function when clicked', () => {
-    const container = setup()
-    fireEvent.click(container.getByText(/update settings/i))
-    expect(handleClickMock).toHaveBeenCalledTimes(1)
-  })
-})
+}

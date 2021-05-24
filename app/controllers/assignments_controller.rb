@@ -364,7 +364,6 @@ class AssignmentsController < ApplicationController
     css_bundle :assignment_grade_summary
     js_bundle :assignment_grade_summary
     js_env(show_moderate_env)
-    set_student_context_cards_js_env
 
     @page_title = @assignment.title
 
@@ -507,7 +506,7 @@ class AssignmentsController < ApplicationController
 
   def syllabus
     rce_js_env
-    add_crumb @context.elementary_homeroom_course? ? t("Important Info") : t('#crumbs.syllabus', "Syllabus")
+    add_crumb @context.elementary_enabled? ? t("Important Info") : t('#crumbs.syllabus', "Syllabus")
     active_tab = "Syllabus"
     if authorized_action(@context, @current_user, [:read, :read_syllabus])
       return unless tab_enabled?(@context.class::TAB_SYLLABUS)
@@ -703,11 +702,8 @@ class AssignmentsController < ApplicationController
       hash[:ANONYMOUS_GRADING_ENABLED] = @context.feature_enabled?(:anonymous_marking)
       hash[:MODERATED_GRADING_ENABLED] = @context.feature_enabled?(:moderated_grading)
       hash[:ANONYMOUS_INSTRUCTOR_ANNOTATIONS_ENABLED] = @context.feature_enabled?(:anonymous_instructor_annotations)
-
-      hash[:SUBMISSION_TYPE_SELECTION_TOOLS] =
-        @domain_root_account&.feature_enabled?(:submission_type_tool_placement) ?
-        external_tools_display_hashes(:submission_type_selection, @context,
-          [:base_title, :external_url, :selection_width, :selection_height]) : []
+      hash[:SUBMISSION_TYPE_SELECTION_TOOLS] = external_tools_display_hashes(:submission_type_selection, @context,
+      [:base_title, :external_url, :selection_width, :selection_height])
 
       append_sis_data(hash)
       if context.is_a?(Course)

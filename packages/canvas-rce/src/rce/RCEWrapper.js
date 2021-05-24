@@ -54,6 +54,19 @@ const RceHtmlEditor = React.lazy(() => import('./RceHtmlEditor'))
 const ASYNC_FOCUS_TIMEOUT = 250
 const DEFAULT_RCE_HEIGHT = '400px'
 
+const toolbarPropType = PropTypes.arrayOf(
+  PropTypes.shape({
+    name: PropTypes.string.isRequired,
+    items: PropTypes.arrayOf(PropTypes.string).isRequired
+  })
+)
+const menuPropType = PropTypes.arrayOf(
+  PropTypes.shape({
+    title: PropTypes.string.isRequired,
+    items: PropTypes.arrayOf(PropTypes.string).isRequired
+  })
+)
+
 // we  `require` instead of `import` because the ui-themeable babel require hook only works with `require`
 // 2021-04-21: This is no longer true, but I didn't want to make a gratutious change when I found this out.
 // see https://gerrit.instructure.com/c/canvas-lms/+/263299/2/packages/canvas-rce/src/rce/RCEWrapper.js#50
@@ -187,12 +200,13 @@ class RCEWrapper extends React.Component {
     id: PropTypes.string,
     language: PropTypes.string,
     liveRegion: PropTypes.func.isRequired,
+    onContentChange: PropTypes.func,
     onFocus: PropTypes.func,
     onBlur: PropTypes.func,
     onInitted: PropTypes.func,
     onRemove: PropTypes.func,
     textareaClassName: PropTypes.string,
-    textareaId: PropTypes.string,
+    textareaId: PropTypes.string.isRequired,
     languages: PropTypes.arrayOf(
       PropTypes.shape({
         id: PropTypes.string.isRequired,
@@ -201,6 +215,9 @@ class RCEWrapper extends React.Component {
     ),
     tinymce: PropTypes.object,
     trayProps: trayPropTypes,
+    toolbar: toolbarPropType,
+    menu: menuPropType,
+    plugins: PropTypes.arrayOf(PropTypes.string),
     instRecordDisabled: PropTypes.bool,
     highContrastCSS: PropTypes.arrayOf(PropTypes.string),
     use_rce_pretty_html_editor: PropTypes.bool
@@ -256,6 +273,8 @@ class RCEWrapper extends React.Component {
         isTinyFullscreen: false
       }
     }
+
+    this.tinymceInitOptions = this.wrapOptions(props.editorOptions)
 
     alertHandler.alertFunc = this.addAlert
 
@@ -890,7 +909,7 @@ class RCEWrapper extends React.Component {
     // first view
     this.setEditorView(this.state.editorView)
 
-    this.props.onInitted?.()
+    this.props.onInitted?.(editor)
   }
 
   _toggleFullscreen = event => {
@@ -1113,7 +1132,7 @@ class RCEWrapper extends React.Component {
 
   get autoSaveKey() {
     const userId = this.props.trayProps?.containingContext.userId
-    return `rceautosave:${userId}${window.location.href}:${this.getTextarea().id}`
+    return `rceautosave:${userId}${window.location.href}:${this.props.textareaId}`
   }
 
   doAutoSave = (e, retry = false) => {
@@ -1167,6 +1186,10 @@ class RCEWrapper extends React.Component {
       .map(p => p.nodeName.toLowerCase())
       .reverse()
     this.setState({path})
+  }
+
+  onEditorChange = (content, _editor) => {
+    this.props.onContentChange?.(content)
   }
 
   onResize = (_e, coordinates) => {
@@ -1232,10 +1255,14 @@ class RCEWrapper extends React.Component {
       .slice(0, 2) || []
 
   wrapOptions(options = {}) {
+    const rcsExists = !!(this.props.trayProps?.host && this.props.trayProps?.jwt)
+
     const setupCallback = options.setup
 
-    const canvasPlugins = ['instructure_links', 'instructure_image', 'instructure_documents']
-    if (!this.props.instRecordDisabled) {
+    const canvasPlugins = rcsExists
+      ? ['instructure_links', 'instructure_image', 'instructure_documents']
+      : ['instructure_links']
+    if (rcsExists && !this.props.instRecordDisabled) {
       canvasPlugins.splice(2, 0, 'instructure_record')
     }
 
@@ -1315,6 +1342,41 @@ class RCEWrapper extends React.Component {
       target_list: false, // don't show the target list when creating/editing links
       link_title: false, // don't show the title input when creating/editing links
       default_link_target: '_blank'
+    }
+
+    // ********** props.toolbar and props.menu is experimental *******
+    if (this.props.toolbar) {
+      // merge given toolbar data into the default toolbar
+      this.props.toolbar.forEach(tb => {
+        const curr_tb = wrappedOpts.toolbar.find(t => tb.name === t.name)
+        if (curr_tb) {
+          curr_tb.items.splice(curr_tb.items.length, 0, ...tb.items)
+        } else {
+          wrappedOpts.toolbar.push(tb)
+        }
+      })
+    }
+    if (this.props.menu) {
+      // merge given menu data into the default toolbar
+      Object.keys(this.props.menu).forEach(k => {
+        const curr_m = wrappedOpts.menu[k]
+        if (curr_m) {
+          curr_m.items += ` | ${this.props.menu[k].items.join(' ')}`
+        } else {
+          const menu_key = k.replace(/\W/, '_')
+          wrappedOpts.menubar += ` ${menu_key}`
+          wrappedOpts.menu[menu_key] = {title: k, items: this.props.menu[k].items}
+        }
+      })
+    }
+
+    if (wrappedOpts.plugins) {
+      wrappedOpts.plugins.splice(wrappedOpts.plugins.length, 0, ...canvasPlugins)
+    } else {
+      wrappedOpts.plugins = canvasPlugins
+    }
+    if (this.props.plugins) {
+      wrappedOpts.plugins.splice(wrappedOpts.plugins.length, 0, ...this.props.plugins)
     }
 
     if (this.props.trayProps) {
@@ -1457,7 +1519,7 @@ class RCEWrapper extends React.Component {
       code = this.mceInstance().getContent({format: 'html'})
     } else {
       // Reproducing the raw HTML editor behavior
-      this.mceInstance().getContent({format: 'raw'})
+      code = this.mceInstance().getContent({format: 'raw'})
     }
 
     // the div keeps the editor from collapsing while the code editor is downloaded
@@ -1531,7 +1593,7 @@ class RCEWrapper extends React.Component {
           <Editor
             id={mceProps.textareaId}
             textareaName={mceProps.name}
-            init={this.wrapOptions(mceProps.editorOptions)}
+            init={this.tinymceInitOptions}
             initialValue={mceProps.defaultContent}
             onInit={this.onInit}
             onClick={this.handleFocusEditor}
@@ -1541,6 +1603,7 @@ class RCEWrapper extends React.Component {
             onFocus={this.handleFocusEditor}
             onBlur={this.handleBlurEditor}
             onNodeChange={this.onNodeChange}
+            onEditorChange={this.onEditorChange}
           />
         </div>
         <StatusBar
@@ -1588,3 +1651,4 @@ class RCEWrapper extends React.Component {
 }
 
 export default RCEWrapper
+export {toolbarPropType, menuPropType}

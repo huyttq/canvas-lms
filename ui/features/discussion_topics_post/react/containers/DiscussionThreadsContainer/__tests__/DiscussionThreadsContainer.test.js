@@ -85,13 +85,13 @@ describe('DiscussionThreadContainer', () => {
 
   it('renders discussion entries', async () => {
     const {queryByText, getByTestId, findByText} = setup(defaultProps())
-    expect(await findByText('Who has the best power?')).toBeTruthy()
+    expect(await findByText('This is the parent reply')).toBeTruthy()
     expect(queryByText('This is the child reply')).toBe(null)
 
     const expandButton = getByTestId('expand-button')
     fireEvent.click(expandButton)
 
-    expect(await findByText('This is the child reply')).toBeTruthy()
+    expect(await findByText('This is the child reply', {}, {timeout: 4000})).toBeTruthy()
   })
 
   it('renders the pagination component if there are more than 1 pages', () => {
@@ -110,9 +110,22 @@ describe('DiscussionThreadContainer', () => {
     const container = setup(defaultProps())
 
     expect(container.getByTestId('is-unread')).toBeInTheDocument()
+    expect(container.getByTestId('is-unread').getAttribute('data-isforcedread')).toBe('false')
+
     window.setTimeout(
       () => expect(container.queryByTestId('is-unread')).not.toBeInTheDocument(),
       3000
     )
+  })
+
+  it('unread discussion entry does not update when forceReadState is true', async () => {
+    const props = defaultProps()
+    props.discussionTopic.discussionEntriesConnection.nodes[0].forcedReadState = true
+
+    const container = setup(props)
+    expect(container.getByTestId('is-unread')).toBeInTheDocument()
+    expect(container.getByTestId('is-unread').getAttribute('data-isforcedread')).toBe('true')
+
+    window.setTimeout(() => expect(container.queryByTestId('is-unread')).toBeInTheDocument(), 3000)
   })
 })

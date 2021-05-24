@@ -160,7 +160,7 @@ class ApplicationController < ActionController::Base
           url_for_high_contrast_tinymce_editor_css: editor_hc_css,
           current_user_id: @current_user&.id,
           current_user_roles: @current_user&.roles(@domain_root_account),
-          current_user_types: @current_user.try{|u| u.account_users.map{|t| t.readable_type }},
+          current_user_types: @current_user.try{|u| u.account_users.active.map(&:readable_type)},
           current_user_disabled_inbox: @current_user&.disabled_inbox?,
           files_domain: HostUrl.file_host(@domain_root_account || Account.default, request.host_with_port),
           DOMAIN_ROOT_ACCOUNT_ID: @domain_root_account&.global_id,
@@ -224,8 +224,8 @@ class ApplicationController < ActionController::Base
   # put feature checks on Account.site_admin and @domain_root_account that we're loading for every page in here
   # so altogether we can get them faster the vast majority of the time
   JS_ENV_SITE_ADMIN_FEATURES = [
-    :cc_in_rce_video_tray, :featured_help_links, :rce_pretty_html_editor, :rce_better_file_downloading, :rce_better_file_previewing, 
-    :expand_cc_languages, :strip_origin_from_quiz_answer_file_references
+    :cc_in_rce_video_tray, :featured_help_links, :rce_pretty_html_editor, :rce_better_file_downloading, :rce_better_file_previewing,
+    :strip_origin_from_quiz_answer_file_references, :rce_buttons_and_icons
   ].freeze
   JS_ENV_ROOT_ACCOUNT_FEATURES = [
     :responsive_awareness, :responsive_misc, :product_tours, :module_dnd, :files_dnd, :unpublished_courses,
@@ -299,12 +299,10 @@ class ApplicationController < ActionController::Base
   helper_method :conditional_release_js_env
 
   def set_student_context_cards_js_env
-    if @domain_root_account.feature_enabled?(:student_context_cards)
-      js_env(
-        STUDENT_CONTEXT_CARDS_ENABLED: true,
-        student_context_card_tools: external_tools_display_hashes(:student_context_card)
-      )
-    end
+    js_env(
+      STUDENT_CONTEXT_CARDS_ENABLED: true,
+      student_context_card_tools: external_tools_display_hashes(:student_context_card)
+    )
   end
 
   def external_tools_display_hashes(type, context=@context, custom_settings=[], tool_ids: nil)

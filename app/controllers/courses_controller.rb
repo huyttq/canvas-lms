@@ -1464,7 +1464,8 @@ class CoursesController < ApplicationController
         RESTRICT_STUDENT_FUTURE_VIEW_LOCKED: @context.account.restrict_student_future_view[:locked],
         PREVENT_COURSE_AVAILABILITY_EDITING_BY_TEACHERS: @context.root_account.settings[:prevent_course_availability_editing_by_teachers],
         MANUAL_MSFT_SYNC_COOLDOWN: MicrosoftSync::Group.manual_sync_cooldown,
-        MSFT_SYNC_ENABLED: !!@context.root_account.settings[:microsoft_sync_enabled]
+        MSFT_SYNC_ENABLED: !!@context.root_account.settings[:microsoft_sync_enabled],
+        MSFT_SYNC_CAN_BYPASS_COOLDOWN: Account.site_admin.account_users_for(@current_user).present?
       })
 
       set_tutorial_js_env
@@ -2076,6 +2077,11 @@ class CoursesController < ApplicationController
         @course_home_view = "k5_dashboard" if @k5_mode
         @course_home_view = "announcements" if @context.elementary_homeroom_course?
 
+        start_date = 14.days.ago.beginning_of_day
+        end_date = start_date + 28.days
+        latest_announcement = Announcement.where(:context_type => 'Course', :context_id => @context.id, :workflow_state => 'active')
+          .ordered_between(start_date, end_date).limit(1).first
+
         js_env({
                  COURSE: {
                    id: @context.id.to_s,
@@ -2086,14 +2092,15 @@ class CoursesController < ApplicationController
                    front_page_title: @context&.wiki&.front_page&.title,
                    default_view: default_view,
                    is_student: @context.user_is_student?(@current_user),
-                   is_instructor: @context.user_is_instructor?(@current_user),
+                   is_instructor: @context.user_is_instructor?(@current_user) || @context.grants_right?(@current_user, session, :read_as_admin),
                    course_overview: @context&.wiki&.front_page&.body,
                    hide_final_grades: @context.hide_final_grades?,
                    student_outcome_gradebook_enabled: @context.feature_enabled?(:student_outcome_gradebook),
                    outcome_proficiency: @context.root_account.feature_enabled?(:account_level_mastery_scales) ? @context.resolved_outcome_proficiency&.as_json : @context.account.resolved_outcome_proficiency&.as_json,
                    show_student_view: can_do(@context, @current_user, :use_student_view),
                    student_view_path: course_student_view_path(course_id: @context, redirect_to_referer: 1),
-                   settings_path: course_settings_path(@context.id)
+                   settings_path: course_settings_path(@context.id),
+                   latest_announcement: latest_announcement && discussion_topic_api_json(latest_announcement, @context, @current_user, session)
                  }
                })
 

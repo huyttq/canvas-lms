@@ -22,13 +22,16 @@ import {DiscussionTopicContainer} from '../DiscussionTopicContainer'
 import {fireEvent, render} from '@testing-library/react'
 import {getEditUrl, getSpeedGraderUrl} from '../../../utils'
 import {graphql} from 'msw'
-import {handlers, defaultTopic} from '../../../../graphql/mswHandlers'
+import {handlers} from '../../../../graphql/mswHandlers'
 import {mswClient} from '../../../../../../shared/msw/mswClient'
 import {mswServer} from '../../../../../../shared/msw/mswServer'
 import React from 'react'
 import {waitFor} from '@testing-library/dom'
+import {Discussion} from '../../../../graphql/Discussion'
 
 jest.mock('@canvas/rce/RichContentEditor')
+
+const defaultTopic = Discussion.mock()
 
 const discussionTopicMock = {
   discussionTopic: {
@@ -129,7 +132,11 @@ describe('DiscussionTopicContainer', () => {
     })
     expect(await container.queryByText('24 replies, 4 unread')).toBeTruthy()
 
-    expect(await container.queryByTestId('graded-discussion-info')).toBeNull()
+    expect(await container.queryByText('No Due Date')).toBeTruthy()
+
+    expect(
+      await container.queryByText('This is a graded discussion: 0 points possible')
+    ).toBeTruthy()
   })
 
   it('renders infoText only when there are replies', async () => {
@@ -318,5 +325,20 @@ describe('DiscussionTopicContainer', () => {
 
     await waitFor(() => expect(container.queryByTestId('discussion-topic-reply')).toBeNull())
     defaultTopic.permissions.reply = true
+  })
+
+  it('should find "Super Group" group name', async () => {
+    const container = setup({discussionTopic: {...defaultTopic}})
+    expect(await container.queryByText('Super Group')).toBeFalsy()
+    fireEvent.click(await container.queryByTestId('groups-menu-btn'))
+    await waitFor(() => expect(container.queryByText('Super Group')).toBeTruthy())
+  })
+
+  it('should not render group menu button when there is child topics but no group set', async () => {
+    const container = setup({
+      discussionTopic: {...discussionTopicMock.discussionTopic, groupSet: null}
+    })
+
+    await expect(container.queryByTestId('groups-menu-btn')).toBeFalsy()
   })
 })
