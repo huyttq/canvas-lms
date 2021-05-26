@@ -779,7 +779,8 @@ $.fn.getFormData = function(options) {
       } catch (e) {}
       const attr = $input.prop('name') || ''
       const multiValue = attr.match(/\[\]$/)
-      if (inputType == 'hidden' && !multiValue) {
+      const isKonvaData = typeof $input.attr('konva-data') !== 'undefined'
+      if (inputType == 'hidden' && !multiValue && !isKonvaData) {
         if (
           $form
             .find("[name='" + attr + "']")
