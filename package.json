@@ -127,6 +127,7 @@
     "jquery-ui-touch-punch": "^0.2.3",
     "jquery.cookie": "^1.4.1",
     "jquery.elastic": "1.0.0",
+    "konva": "^8.0.1",
     "location-origin": "^1.1.4",
     "lodash": "^4.16.4",
     "md5": "^2.2.1",
