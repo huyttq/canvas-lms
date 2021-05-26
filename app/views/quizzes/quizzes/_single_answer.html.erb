@@ -79,6 +79,13 @@
     value="<%= attachment_id_for(question) %>"/>
   <% end %>
   <input type="hidden" id="fileupload_in_progress" value="false"/>
+<% elsif question_type.entry_type == "konva_editor" %>
+  <div class='konva_illustrating_question'>
+    <input type="hidden" konva-data name="question_<%= hash_get(question, :id) %>" value="<%= value %>" class="question_input" />
+    <div class='illustrating_editor' style='position: relative'>Loading...</div>
+    <input type="hidden" name="illustrating_background_url" value="<%= hash_get(question, :illustrating_background_url) %>" />
+    <input type="hidden" name="kson_data" value="<%= hash_get(question, :kson_data) %>" />
+  </div>
 <% end %>
 
 </div>

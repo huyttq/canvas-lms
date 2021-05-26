@@ -82,6 +82,10 @@ class Quizzes::QuizQuestion::QuestionData
     question[:question_text] = fields.sanitize(fields.fetch_with_enforced_length(:question_text, default: I18n.t(:default_question_text, "Question text")))
     question[:answers] = fields.fetch_any(:answers, [])
     question[:text_after_answers] = fields.sanitize(fields.fetch_any(:text_after_answers))
+    if question[:question_type] == "illustrating_question"
+      question[:kson_data] = fields.fetch_with_enforced_length(:kson_data, max_size: 50.kilobyte)
+      question[:illustrating_background_url] = fields.fetch_any(:illustrating_background_url, "text_only_question")
+    end
 
     if question.is_type?(:calculated)
       question[:formulas] = fields.fetch_any(:formulas, [])

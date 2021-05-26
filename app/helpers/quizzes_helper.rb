@@ -306,6 +306,14 @@ module QuizzesHelper
         false,
         false
       ),
+      "illustrating_question" => QuestionType.new(
+        "illustrating_question",
+        "konva_editor",
+        "single",
+        "text_answer",
+        false,
+        false
+      ),
       "file_upload_question" => QuestionType.new(
         "file_upload_question",
         "file",
@@ -456,7 +464,7 @@ module QuizzesHelper
       answers.each { |k, v| res.sub! /\{\{#{k}\}\}/, h(v) }
       res.gsub! /\{\{question_[^}]+\}\}/, ""
     end
-    
+
     # all of our manipulation lost this flag - reset it
     res.html_safe
   end

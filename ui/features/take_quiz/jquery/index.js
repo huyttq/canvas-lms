@@ -38,6 +38,7 @@ import '@canvas/rails-flash-notifications'
 import 'jquery-scroll-to-visible/jquery.scrollTo'
 import '@canvas/quizzes/jquery/behaviors/quiz_selectmenu'
 import SignaturePad from 'signature_pad'
+import KonvaControl from '../../quizzes/konva_control'
 
 RichContentEditor.preloadRemoteModule()
 
@@ -941,6 +942,19 @@ $(function() {
       RichContentEditor.loadNewEditor($(this), {manageParent: true})
     })
   }, 2000)
+
+  // Render Konva Control
+  $('.konva_illustrating_question').each(function() {
+    const backgroundUrl = $(this).find("input[name='illustrating_background_url']").val()
+    const $questionInput = $(this).find(".question_input")
+    const userAnswer = $questionInput.val() || $(this).find("input[name='kson_data']").val()
+    const containerEle = $(this).find('.illustrating_editor')[0]
+
+    const konvaCtrl = new KonvaControl(containerEle, (jsonData) => {
+      $questionInput.val(jsonData)
+    })
+    konvaCtrl.draw(backgroundUrl, userAnswer, true)
+  })
 
   if (quizTakingPolice) {
     quizTakingPolice.addEventListener('message', e => {

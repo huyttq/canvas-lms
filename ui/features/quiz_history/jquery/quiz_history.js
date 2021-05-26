@@ -25,6 +25,7 @@ import '@canvas/util/templateData'
 import 'jquery-scroll-to-visible/jquery.scrollTo'
 import '@canvas/quizzes/jquery/behaviors/quiz_selectmenu'
 import SignaturePad from 'signature_pad'
+import KonvaControl from '../../quizzes/konva_control'
 
 const parentWindow = {
   exists() {
@@ -465,4 +466,14 @@ $(document).ready(function () {
       }
     })
   }
+
+  // Render read-only Konva Control
+  $('.konva_illustrating_question').each(function() {
+    const backgroundUrl = $(this).find("input[name='illustrating_background_url']").val()
+    const ksonData = $(this).find(".question_input").val()
+    const containerEle = $(this).find('.illustrating_editor')[0]
+
+    const konvaCtrl = new KonvaControl(containerEle, () => {})
+    konvaCtrl.draw(backgroundUrl, ksonData, false)
+  })
 })

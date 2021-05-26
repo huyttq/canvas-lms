@@ -51,6 +51,8 @@ module Api::V1::QuizQuestion
     formula_decimal_places
     matches
     matching_answer_incorrect_matches
+    illustrating_background_url
+    kson_data
   )
 
   # @param [Quizzes::Quiz#quiz_data] quiz_data

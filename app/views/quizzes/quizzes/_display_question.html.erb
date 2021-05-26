@@ -141,6 +141,8 @@
       <span class="regrade_option"><%= hash_get(question, :regrade_option) %></span>
       <span class="regrade_disabled"><%= hash_get(question, :regrade_option) == 'disabled' ? 1 : 0 %></span>
       <span class="question_type"><%= (question_type.try_rescue(:question_type)) %></span>
+      <span class="illustrating_background_url"><%= hash_get(question, :illustrating_background_url) %></span>
+      <span class="kson_data"><%= hash_get(question, :kson_data) %></span>
       <span class="answer_selection_type"></span>
       <% if question_bank_id %>
         <a href="<%= context_url(@context, :context_question_bank_assessment_question_url, question_bank_id, hash_get(question, :id, "{{ id }}")) %>" class="update_question_url" tabindex="-1" aria-hidden="true">&nbsp;</a>

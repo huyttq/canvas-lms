@@ -61,6 +61,7 @@ import 'jquery-scroll-to-visible/jquery.scrollTo'
 import 'jqueryui/sortable'
 import 'jqueryui/tabs'
 import AssignmentExternalTools from '@canvas/assignments/react/AssignmentExternalTools'
+import KonvaControl from '../konva_control'
 
 let dueDateList, overrideView, quizModel, sectionList, correctAnswerVisibility, scoreValidation
 
@@ -594,6 +595,8 @@ export const quiz = (window.quiz = {
       result = 'multiple_answer'
     } else if (question_type == 'text_only_question') {
       result = 'none'
+    } else if (question_type == 'illustrating_question') {
+      result = 'illustrating'
     }
     return result
   },
@@ -926,6 +929,9 @@ export const quiz = (window.quiz = {
       .find('.question_comment')
       .css('display', '')
       .end()
+    $formQuestion
+      .find('.illustrating_question')
+      .hide()
     if (is_survey_quiz) {
       $formQuestion
         .find('.question_comment')
@@ -979,6 +985,23 @@ export const quiz = (window.quiz = {
       $formQuestion.removeClass('selectable')
       result.answer_type = 'short_answer'
     } else if (question_type == 'essay_question' || question_type == 'file_upload_question') {
+      $formQuestion.find('.answer').remove()
+      $formQuestion.removeClass('selectable')
+      $formQuestion
+        .find('.answers_header')
+        .hide()
+        .end()
+        .find('.question_comment')
+        .css('display', 'none')
+        .end()
+        .find('.question_neutral_comment')
+        .css('display', '')
+        .end()
+      options.addable = false
+      result.answer_type = 'none'
+      result.textValues = []
+      result.htmlValues = []
+    } else if (question_type == 'illustrating_question') {
       $formQuestion.find('.answer').remove()
       $formQuestion.removeClass('selectable')
       $formQuestion
@@ -1071,6 +1094,21 @@ export const quiz = (window.quiz = {
       $answers.addClass('correct_answer')
     } else if (result.answer_selection_type == 'matching') {
       $answers.removeClass('correct_answer')
+    } else if (result.answer_selection_type == 'illustrating') {
+      const $ksonData = $formQuestion.find("input[name='kson_data']")
+      const $backgroundUrl = $formQuestion.find('.background_url_input')
+      const containerEle = $formQuestion.find('.illustrating_editor')[0]
+
+      $formQuestion.find('.konva_illustrating_question').show()
+      const konvaCtrl = new KonvaControl(containerEle, (jsonData) => {
+        $ksonData.val(jsonData)
+      })
+      konvaCtrl.draw($backgroundUrl.val(), $ksonData.val(), true)
+
+      $('.load_url_button').click(evt => {
+        $formQuestion.find('.illustrating_editor').empty()
+        konvaCtrl.drawBackgroundWithSampleObjects($backgroundUrl.val(), 600, 722)
+      })
     } else if (result.answer_selection_type != 'multiple_answer') {
       $answers
         .filter('.correct_answer')
@@ -1718,7 +1756,9 @@ function quizData($question) {
         'matching_answer_incorrect_matches',
         'equation_combinations',
         'equation_formulas',
-        'regrade_option'
+        'regrade_option',
+        'illustrating_background_url',
+        'kson_data'
       ],
       htmlValues: [
         'question_text',
@@ -1875,6 +1915,8 @@ function generateFormQuiz(quiz) {
     q.variables = question.variables
     q.answer_tolerance = question.answer_tolerance
     q.formula_decimal_places = question.formula_decimal_places
+    q.illustrating_background_url = question.illustrating_background_url
+    q.kson_data = question.kson_data
 
     q.answers = question.answers
     data.questions.push(q)
@@ -2656,7 +2698,9 @@ $(document).ready(function() {
         'blank_id',
         'matching_answer_incorrect_matches',
         'regrade_option',
-        'regrade_disabled'
+        'regrade_disabled',
+        'illustrating_background_url',
+        'kson_data'
       ],
       htmlValues: [
         'question_text',
@@ -3853,7 +3897,7 @@ $(document).ready(function() {
     } else if ($answers.length === 0 || $answers.filter('.correct_answer').length === 0) {
       if (
         $answers.length === 0 &&
-        !['essay_question', 'file_upload_question', 'text_only_question'].includes(
+        !['essay_question', 'file_upload_question', 'text_only_question', 'illustrating_question'].includes(
           questionData.question_type
         )
       ) {

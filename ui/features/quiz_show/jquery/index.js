@@ -37,6 +37,7 @@ import '@canvas/message-students-dialog/jquery/message_students' /* messageStude
 import AssignmentExternalTools from '@canvas/assignments/react/AssignmentExternalTools'
 import DirectShareUserModal from '@canvas/direct-sharing/react/components/DirectShareUserModal'
 import DirectShareCourseTray from '@canvas/direct-sharing/react/components/DirectShareCourseTray'
+import KonvaControl from '../../quizzes/konva_control'
 
 $(document).ready(function() {
   if (ENV.QUIZ_SUBMISSION_EVENTS_URL) {
@@ -289,4 +290,14 @@ $(document).ready(function() {
       parseInt(ENV.QUIZ.assignment_id, 10)
     )
   }
+
+  // Render read-only Konva Control
+  $('.konva_illustrating_question').each(function() {
+    const backgroundUrl = $(this).find("input[name='illustrating_background_url']").val()
+    const ksonData = $(this).find(".question_input").val()
+    const containerEle = $(this).find('.illustrating_editor')[0]
+
+    const konvaCtrl = new KonvaControl(containerEle, () => {})
+    konvaCtrl.draw(backgroundUrl, ksonData, false)
+  })
 })

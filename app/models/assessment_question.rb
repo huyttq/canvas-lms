@@ -325,7 +325,8 @@ class AssessmentQuestion < ActiveRecord::Base
       :neutral_comments, :question_type, :question_name, :question_text, :answers,
       :formulas, :variables, :answer_tolerance, :formula_decimal_places,
       :matching_answer_incorrect_matches, :matches,
-      :correct_comments_html, :incorrect_comments_html, :neutral_comments_html
+      :correct_comments_html, :incorrect_comments_html, :neutral_comments_html,
+      :illustrating_background_url, :kson_data
     )
 
     [
