@@ -220,7 +220,7 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
                   res[guid] = answerId
                 end
               }
-            elsif questionDef["question_type"] == 'essay_question' && res[qid].nil?
+            elsif (questionDef["question_type"] == 'essay_question' || questionDef["question_type"] == 'illustrating_question') && res[qid].nil?
               res[qid] = sd["text"]
             end
           end
