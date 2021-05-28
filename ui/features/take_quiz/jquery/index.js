@@ -951,7 +951,7 @@ $(function() {
     const containerEle = $(this).find('.illustrating_editor')[0]
 
     const konvaCtrl = new KonvaControl(containerEle, (jsonData) => {
-      $questionInput.val(jsonData)
+      $questionInput.val(jsonData).trigger('change')
     })
     konvaCtrl.draw(backgroundUrl, userAnswer, true)
   })
