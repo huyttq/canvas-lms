@@ -1109,7 +1109,7 @@ export const quiz = (window.quiz = {
 
       $('.load_url_button').click(evt => {
         $formQuestion.find('.illustrating_editor').empty()
-        konvaCtrl.drawBackgroundWithSampleObjects($backgroundUrl.val(), 600, 722)
+        konvaCtrl.drawBackgroundWithSampleObjects($backgroundUrl.val(), 600, 720)
         konvaCtrl.addContextMenu()
         konvaCtrl.addTransformer()
       })

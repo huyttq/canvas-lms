@@ -123,7 +123,7 @@ export default class KonvaControl {
       stroke: 'red',
       strokeWidth: 1,
       draggable: true,
-      opacity: 0.7
+      opacity: 0.7,
     })
     this.registerCircleNodeEvents(redCircle)
     return redCircle
@@ -200,6 +200,10 @@ export default class KonvaControl {
         scaleY: 1,
       })
     })
+
+    textNode.dragBoundFunc((pos) => {
+      return this.dragBoundFunc(pos, textNode.width(), textNode.height())
+    })
   }
 
   registerCircleNodeEvents(circleNode) {
@@ -233,6 +237,24 @@ export default class KonvaControl {
       shape.scaleY(1)
       this.tooltip.hide()
     })
+
+    circleNode.dragBoundFunc((pos) => {
+      return this.dragBoundFunc(pos, circleNode.width()/2, circleNode.height()/2)
+    })
+  }
+
+  dragBoundFunc(pos, shapeWidth, shapeHeight) {
+    const maxX = this.stage.width() - shapeWidth
+    const maxY = this.stage.height() - shapeHeight
+    let newX = pos.x > maxX ? maxX : pos.x
+    newX = newX < 0 ? 0 : newX
+
+    let newY = pos.y > maxY ? maxY : pos.y
+    newY = newY < 0 ? 0 : newY
+    return {
+      x: newX,
+      y: newY,
+    }
   }
 
   addContextMenu() {
