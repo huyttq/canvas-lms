@@ -1104,10 +1104,14 @@ export const quiz = (window.quiz = {
         $ksonData.val(jsonData)
       })
       konvaCtrl.draw($backgroundUrl.val(), $ksonData.val(), true)
+      konvaCtrl.addContextMenu()
+      konvaCtrl.addTransformer()
 
       $('.load_url_button').click(evt => {
         $formQuestion.find('.illustrating_editor').empty()
         konvaCtrl.drawBackgroundWithSampleObjects($backgroundUrl.val(), 600, 722)
+        konvaCtrl.addContextMenu()
+        konvaCtrl.addTransformer()
       })
     } else if (result.answer_selection_type != 'multiple_answer') {
       $answers

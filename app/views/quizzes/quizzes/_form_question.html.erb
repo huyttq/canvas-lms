@@ -209,11 +209,37 @@
     </div>
     <div class="form_answers">
     </div>
-    <div class='konva_illustrating_question'>
+    <div class='konva_illustrating_question' style="position: relative">
       <input type="text" class="background_url_input" name="illustrating_background_url">
       <button type="button" class="btn btn-small load_url_button">Load</button>
       <div class='illustrating_editor' style='position: relative'></div>
+      <div id="konva_context_menu">
+        <div>
+          <button id="konva_context_menu_clone">Clone</button>
+          <button id="konva_context_menu_delete">Delete</button>
+        </div>
+      </div>
       <input type="hidden" name="kson_data">
+      <style type="text/css">
+        #konva_context_menu {
+          display: none;
+          position: absolute;
+          width: 60px;
+          background-color: white;
+          box-shadow: 0 0 5px grey;
+          border-radius: 3px;
+        }
+        #konva_context_menu button {
+          width: 100%;
+          background-color: white;
+          border: none;
+          margin: 0;
+          padding: 10px;
+        }
+        #konva_context_menu button:hover {
+          background-color: lightgray;
+        }
+      </style>
     </div>
     <div style="text-align: <%= direction('right') %>;" class="add_answer">
       <a href="#" class="add_answer_link icon-add"><%= t('links.add_another_answer', "Add Another Answer") %></a>

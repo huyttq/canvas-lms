@@ -1,11 +1,39 @@
 import Konva from 'konva'
-
+import uuid from 'uuid'
 export default class KonvaControl {
   constructor(containerElement, callback) {
     this.containerElement = containerElement
     this.stage = null
     this.callback = callback
     this.backgroundId = 'backgroundImage'
+    this.editableLayerId = 'editableLayer'
+    this.tooltipText = new Konva.Text({
+      text: '',
+      fontFamily: 'Calibri',
+      fontSize: 12,
+      padding: 5,
+      fill: 'black'
+    })
+
+    this.tooltip = new Konva.Label({
+      x: 180,
+      y: 150,
+      opacity: 0.75,
+      visible: false
+    })
+
+    this.tooltip.add(
+      new Konva.Tag({
+        fill: 'yellow',
+      })
+    )
+    this.tooltip.add(this.tooltipText)
+
+    //context menu
+    this.currentShape = null
+
+    this.MIN_WIDTH = 20;
+
   }
 
   draw(backgroundUrl, ksonData, editable) {
@@ -19,8 +47,14 @@ export default class KonvaControl {
     }
 
     this.stage = Konva.Node.create(ksonData, this.containerElement)
+    var imageObj = new Image()
+    imageObj.onload = () => {
+      this.stage.findOne('#' + this.backgroundId).image(imageObj)
+    }
+    imageObj.src = backgroundUrl
 
-    this.stage.find('Circle').forEach(cir => {
+    const editableLayer = this.stage.find(`#${this.editableLayerId}`)[0]
+    editableLayer.find('Circle').forEach(cir => {
       if (editable) {
         this.registerCircleNodeEvents(cir)
       }
@@ -28,8 +62,7 @@ export default class KonvaControl {
         cir.draggable(false)
       }
     })
-
-    this.stage.find('Text').forEach(textNode => {
+    editableLayer.find('Text').forEach(textNode => {
       if (editable) {
         this.registerTextNodeEvents(textNode)
       }
@@ -38,11 +71,11 @@ export default class KonvaControl {
       }
     })
 
-    var imageObj = new Image()
-    imageObj.onload = () => {
-      this.stage.findOne('#' + this.backgroundId).image(imageObj)
+    if (editable) {
+      const tooltipLayer = new Konva.Layer()
+      tooltipLayer.add(this.tooltip)
+      this.stage.add(tooltipLayer)
     }
-    imageObj.src = backgroundUrl
   }
 
   drawBackgroundWithSampleObjects(backgroundUrl, width, height) {
@@ -53,17 +86,22 @@ export default class KonvaControl {
     })
 
     const backgroundLayer = new Konva.Layer()
-    const editableLayer = new Konva.Layer()
+    const editableLayer = new Konva.Layer({
+      id: this.editableLayerId
+    })
+    const tooltipLayer = new Konva.Layer()
 
-    editableLayer.add(this.createRedCircle('rc1', 400, 350))
-    editableLayer.add(this.createRedCircle('rc2', 500, 350))
-    editableLayer.add(this.createKonvaText('txt1', 150, 10, 300));
-    editableLayer.add(this.createKonvaText('txt3', 220, 30, 300));
-    editableLayer.add(this.createKonvaText('txt2', 40, 200, 250));
+    editableLayer.add(this.createRedCircle(400, 350))
+    editableLayer.add(this.createRedCircle(500, 350))
+    editableLayer.add(this.createKonvaText(150, 10, 300))
+    editableLayer.add(this.createKonvaText(40, 200, 250))
+    editableLayer.add(this.createKonvaText(220, 30, 300))
 
     this.stage.add(backgroundLayer)
     this.stage.add(editableLayer)
-    // var source = 'http://localhost:3000/files/744/download?download_frd=1'
+    tooltipLayer.add(this.tooltip)
+    this.stage.add(tooltipLayer)
+    // http://localhost:3000/files/744/download?download_frd=1
     // try to draw SVG natively
     Konva.Image.fromURL(backgroundUrl, (imageNode) => {
       imageNode.setAttrs({
@@ -75,9 +113,9 @@ export default class KonvaControl {
     })
   }
 
-  createRedCircle(id, x, y) {
+  createRedCircle(x, y) {
     const redCircle = new Konva.Circle({
-      id: id,
+      id: uuid(),
       x: x,
       y: y,
       radius: 10,
@@ -91,14 +129,14 @@ export default class KonvaControl {
     return redCircle
   }
 
-  createKonvaText(id, x, y, width) {
+  createKonvaText(x, y, width) {
     const textNode = new Konva.Text({
-      id: id,
-      text: 'Some text here',
+      id: uuid(),
+      text: 'Enter some text',
       x: x,
       y: y,
       width: width,
-      fontSize: 16,
+      fontSize: 14,
       fill: 'green',
       draggable: true,
     })
@@ -108,6 +146,7 @@ export default class KonvaControl {
   }
 
   registerTextNodeEvents(textNode) {
+    textNode.off('dblclick dbltap')
     textNode.on('dblclick dbltap', () => {
       const textPosition = textNode.getAbsolutePosition()
       // create textarea and style it
@@ -120,9 +159,9 @@ export default class KonvaControl {
       textarea.style.left = (textPosition.x - 5) + 'px'
       textarea.style.width = textNode.width()
       textarea.focus()
-      textarea.addEventListener('keydown', (e) => {
+      textarea.addEventListener('keydown', (evt) => {
         // hide on enter
-        if (e.keyCode === 13) {
+        if (evt.keyCode === 13) {
           textNode.text(textarea.value);
           this.callback(this.stage.toJSON())
           $(textarea).remove()
@@ -130,27 +169,158 @@ export default class KonvaControl {
       })
     })
 
-    textNode.on('mouseover', () => {
-      document.body.style.cursor = 'pointer';
+    textNode.on('mouseover', (evt) => {
+      document.body.style.cursor = 'pointer'
+      const mousePos = this.stage.getPointerPosition();
+      this.tooltip.position({
+        x: mousePos.x + 5,
+        y: mousePos.y + 5,
+      })
+      this.tooltipText.text('Double click to edit then press Enter')
+      this.tooltip.show()
     });
-    textNode.on('mouseout', () => {
-      document.body.style.cursor = 'default';
+    textNode.on('mouseout', (evt) => {
+      document.body.style.cursor = 'default'
+      this.tooltip.hide()
     })
-    textNode.on('dragend', () => {
+    textNode.on('dragstart', evt => {
+      this.tooltip.hide()
+    })
+    textNode.on('dragend', (evt) => {
       this.callback(this.stage.toJSON())
+    })
+
+    textNode.on('transform', () => {
+      // with enabled anchors we can only change scaleX
+      // so we don't need to reset height
+      // just width
+      textNode.setAttrs({
+        width: Math.max(textNode.width() * textNode.scaleX(), this.MIN_WIDTH),
+        scaleX: 1,
+        scaleY: 1,
+      })
     })
   }
 
   registerCircleNodeEvents(circleNode) {
+    circleNode.off('dblclick dbltap')
+
     // add cursor styling
-    circleNode.on('mouseover', () => {
-      document.body.style.cursor = 'pointer';
-    });
-    circleNode.on('mouseout', () => {
-      document.body.style.cursor = 'default';
+    circleNode.on('dragstart', evt => {
+      this.tooltip.hide()
     })
-    circleNode.on('dragend', () => {
+    circleNode.on('dragend', (evt) => {
       this.callback(this.stage.toJSON())
+    })
+    circleNode.on('mouseover', (evt) => {
+      const shape = evt.target
+      shape.scaleX(1.2)
+      shape.scaleY(1.2)
+      document.body.style.cursor = 'pointer'
+
+      const mousePos = this.stage.getPointerPosition();
+      this.tooltip.position({
+        x: mousePos.x + 5,
+        y: mousePos.y + 5,
+      })
+      this.tooltipText.text('Drag the circle to the body position')
+      this.tooltip.show()
+    })
+    circleNode.on('mouseout', (evt) => {
+      const shape = evt.target
+      document.body.style.cursor = 'default'
+      shape.scaleX(1)
+      shape.scaleY(1)
+      this.tooltip.hide()
+    })
+  }
+
+  addContextMenu() {
+    if (!this.stage) return
+    this.stage.on('contextmenu', e => {
+      // prevent default behavior
+      e.evt.preventDefault()
+      const shapeType = e.target.className
+      if (shapeType !== 'Circle' && shapeType !== 'Text') {
+        // if we are on empty place of the stage we will do nothing
+        return
+      }
+      this.currentShape = e.target;
+      // show menu
+      const mousePos = this.stage.getPointerPosition();
+      const $menuNode = $('#konva_context_menu')
+      $menuNode.css('top', mousePos.y + 40 + 'px')
+      $menuNode.css('left', mousePos.x + 4 + 'px')
+      $menuNode.show()
+
+      const events = $.data($('#konva_context_menu_delete').get(0), 'events')
+      if (!events || !events.click) {
+        $('#konva_context_menu_delete').click(evt => {
+          evt.preventDefault()
+          this.currentShape.transformsEnabled('none')
+          this.currentShape.destroy()
+          $('#konva_context_menu').hide()
+        })
+      }
+
+      const cloneEvents = $.data($('#konva_context_menu_clone').get(0), 'events')
+      if (!cloneEvents || !cloneEvents.click) {
+        $('#konva_context_menu_clone').click(evt => {
+          evt.preventDefault()
+          const shapeType = this.currentShape.className
+          if (shapeType !== 'Circle' && shapeType !== 'Text') return
+
+          const mousePos = this.stage.getPointerPosition();
+          const clone = this.currentShape.clone({
+            id: uuid(),
+            x: mousePos.x + 15,
+            y: mousePos.y + 15,
+            draggable: true
+          })
+          const editableLayer = this.stage.find(`#${this.editableLayerId}`)[0]
+
+          if (shapeType === 'Circle') {
+            this.registerCircleNodeEvents(clone)
+          }
+          else {
+            editableLayer.add(this.createTransformer(clone))
+            this.registerTextNodeEvents(clone)
+          }
+          editableLayer.add(clone)
+          $('#konva_context_menu').hide()
+        })
+      }
+    })
+
+    window.addEventListener('click', () => {
+      // hide menu
+      $('#konva_context_menu').hide()
+    })
+  }
+
+  createTransformer(node) {
+    return new Konva.Transformer({
+      nodes: [node],
+      padding: 5,
+      rotateEnabled: false,
+      // enable only side anchors
+      enabledAnchors: ['middle-left', 'middle-right'],
+      // limit transformer size
+      boundBoxFunc: (oldBox, newBox) => {
+        if (newBox.width < this.MIN_WIDTH) {
+          return oldBox
+        }
+        return newBox
+      },
+    })
+  }
+
+  addTransformer() {
+    if (!this.stage) return
+
+    const editableLayer = this.stage.find(`#${this.editableLayerId}`)[0]
+    editableLayer.find('Text').forEach(textNode => {
+      editableLayer.add(this.createTransformer(textNode))
     })
   }
 }
