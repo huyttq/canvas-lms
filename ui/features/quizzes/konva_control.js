@@ -1,5 +1,6 @@
 import Konva from 'konva'
 import uuid from 'uuid'
+import KonvaCheckBox from './konva_check_box'
 export default class KonvaControl {
   constructor(containerElement, callback) {
     this.containerElement = containerElement
@@ -47,14 +48,18 @@ export default class KonvaControl {
     }
 
     this.stage = Konva.Node.create(ksonData, this.containerElement)
+    this.stage.on('datachange', evt => {
+      this.callback(this.stage.toJSON())
+    })
+
     var imageObj = new Image()
     imageObj.onload = () => {
       this.stage.findOne('#' + this.backgroundId).image(imageObj)
     }
     imageObj.src = backgroundUrl
 
-    const editableLayer = this.stage.find(`#${this.editableLayerId}`)[0]
-    editableLayer.find('Circle').forEach(cir => {
+    const editableLayer = this.stage.findOne(`#${this.editableLayerId}`)
+    editableLayer.find('.input_circle').forEach(cir => {
       if (editable) {
         this.registerCircleNodeEvents(cir)
       }
@@ -62,13 +67,16 @@ export default class KonvaControl {
         cir.draggable(false)
       }
     })
-    editableLayer.find('Text').forEach(textNode => {
+    editableLayer.find('.input_text').forEach(textNode => {
       if (editable) {
         this.registerTextNodeEvents(textNode)
       }
       else {
         textNode.draggable(false)
       }
+    })
+    editableLayer.find('.checkbox').forEach(groupNode => {
+      new KonvaCheckBox(this.containerElement, groupNode, editable)
     })
 
     if (editable) {
@@ -84,6 +92,9 @@ export default class KonvaControl {
       width: width,
       height: height,
     })
+    this.stage.on('datachange', evt => {
+      this.callback(this.stage.toJSON())
+    })
 
     const backgroundLayer = new Konva.Layer()
     const editableLayer = new Konva.Layer({
@@ -96,6 +107,20 @@ export default class KonvaControl {
     editableLayer.add(this.createKonvaText(150, 10, 300))
     editableLayer.add(this.createKonvaText(40, 200, 250))
     editableLayer.add(this.createKonvaText(220, 30, 300))
+    const checkbox = KonvaCheckBox.create(
+      this.containerElement,
+      {
+        id: 'chk1',
+        x: 100, y: 300,
+        name: 'cloneable checkbox',
+        dragBoundFunc: pos => {
+          return this.dragBoundFunc(pos, checkbox.width(), checkbox.height())
+        }
+      },
+      "Hello world!",
+      16
+    )
+    editableLayer.add(checkbox.getKonvaControl())
 
     this.stage.add(backgroundLayer)
     this.stage.add(editableLayer)
@@ -124,6 +149,7 @@ export default class KonvaControl {
       strokeWidth: 1,
       draggable: true,
       opacity: 0.7,
+      name: 'cloneable input_circle'
     })
     this.registerCircleNodeEvents(redCircle)
     return redCircle
@@ -139,6 +165,7 @@ export default class KonvaControl {
       fontSize: 14,
       fill: 'green',
       draggable: true,
+      name: 'transformable cloneable input_text'
     })
     this.registerTextNodeEvents(textNode)
 
@@ -163,7 +190,7 @@ export default class KonvaControl {
         // hide on enter
         if (evt.keyCode === 13) {
           textNode.text(textarea.value);
-          this.callback(this.stage.toJSON())
+          textNode.fire('datachange', {}, true)
           $(textarea).remove()
         }
       })
@@ -187,7 +214,8 @@ export default class KonvaControl {
       this.tooltip.hide()
     })
     textNode.on('dragend', (evt) => {
-      this.callback(this.stage.toJSON())
+      // this.callback(this.stage.toJSON())
+      textNode.fire('datachange', {}, true)
     })
 
     textNode.on('transform', () => {
@@ -214,7 +242,7 @@ export default class KonvaControl {
       this.tooltip.hide()
     })
     circleNode.on('dragend', (evt) => {
-      this.callback(this.stage.toJSON())
+      circleNode.fire('datachange', {}, true)
     })
     circleNode.on('mouseover', (evt) => {
       const shape = evt.target
@@ -244,6 +272,7 @@ export default class KonvaControl {
   }
 
   dragBoundFunc(pos, shapeWidth, shapeHeight) {
+    // console.log(`drag event ${shapeWidth} ${this.stage.width()}`)
     const maxX = this.stage.width() - shapeWidth
     const maxY = this.stage.height() - shapeHeight
     let newX = pos.x > maxX ? maxX : pos.x
@@ -268,6 +297,9 @@ export default class KonvaControl {
         return
       }
       this.currentShape = e.target;
+      if (this.currentShape.hasName('checkbox_label') || this.currentShape.hasName('checkbox_square')) {
+        this.currentShape = this.currentShape.parent
+      }
       // show menu
       const mousePos = this.stage.getPointerPosition();
       const $menuNode = $('#konva_context_menu')
@@ -289,25 +321,31 @@ export default class KonvaControl {
       if (!cloneEvents || !cloneEvents.click) {
         $('#konva_context_menu_clone').click(evt => {
           evt.preventDefault()
-          const shapeType = this.currentShape.className
-          if (shapeType !== 'Circle' && shapeType !== 'Text') return
+          if (!this.currentShape.hasName('cloneable')) return
 
           const mousePos = this.stage.getPointerPosition();
-          const clone = this.currentShape.clone({
+          let clone = this.currentShape.clone({
             id: uuid(),
             x: mousePos.x + 15,
             y: mousePos.y + 15,
             draggable: true
           })
-          const editableLayer = this.stage.find(`#${this.editableLayerId}`)[0]
-
-          if (shapeType === 'Circle') {
+          const editableLayer = this.stage.findOne(`#${this.editableLayerId}`)
+          if (this.currentShape.hasName('tranformable')) {
+            editableLayer.add(this.createTransformer(clone))
+          }
+          if (this.currentShape.hasName('checkbox')) {
+            const checkbox = new KonvaCheckBox(this.containerElement, clone, true)
+            checkbox.enableTextEditor()
+            clone = checkbox.getKonvaControl()
+          }
+          else if (this.currentShape.className === 'Circle') {
             this.registerCircleNodeEvents(clone)
           }
-          else {
-            editableLayer.add(this.createTransformer(clone))
+          else if (this.currentShape.className === 'Text') {
             this.registerTextNodeEvents(clone)
           }
+
           editableLayer.add(clone)
           $('#konva_context_menu').hide()
         })
@@ -341,7 +379,7 @@ export default class KonvaControl {
     if (!this.stage) return
 
     const editableLayer = this.stage.find(`#${this.editableLayerId}`)[0]
-    editableLayer.find('Text').forEach(textNode => {
+    editableLayer.find('.transformable').forEach(textNode => {
       editableLayer.add(this.createTransformer(textNode))
     })
   }

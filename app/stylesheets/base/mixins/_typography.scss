@@ -35,3 +35,9 @@
   font-size: $size;
   font-size: calculateRem($size);
 }
+@font-face {
+  font-family: 'FontAwesome';
+  src: url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/webfonts/fa-regular-400.ttf');
+  font-weight: normal;
+  font-style: normal;
+}

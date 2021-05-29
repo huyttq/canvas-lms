@@ -1098,7 +1098,9 @@ export const quiz = (window.quiz = {
       const $ksonData = $formQuestion.find("input[name='kson_data']")
       const $backgroundUrl = $formQuestion.find('.background_url_input')
       const containerEle = $formQuestion.find('.illustrating_editor')[0]
-
+      if (!$backgroundUrl.val()) {
+        $backgroundUrl.val('http://localhost:3000/files/750/download?download_frd=1')
+      }
       $formQuestion.find('.konva_illustrating_question').show()
       const konvaCtrl = new KonvaControl(containerEle, (jsonData) => {
         $ksonData.val(jsonData)
