@@ -26,23 +26,23 @@ export default class KonvaCheckBox {
   }
 
   registerEvents() {
-    //reset events if any
+    // reset events if any
     this.group.off('click dblclick dbltap mouseover mouseout')
 
     this.group.on('click', evt => {
-      var curText = this.square.text()
-      this.square.text(curText === "\uf14a" ? "\uf0c8" : "\uf14a")
-      this.square.fill(this.square.fill() === "black" ? "green" : "black")
+      const curText = this.square.text()
+      this.square.text(curText === '\uf14a' ? '\uf0c8' : '\uf14a')
+      this.square.fill(this.square.fill() === 'black' ? 'green' : 'black')
     })
-    this.group.on('mouseover', (evt) => {
+    this.group.on('mouseover', evt => {
       document.body.style.cursor = 'pointer'
       this.square.shadowEnabled(true)
     })
-    this.group.on('mouseout', (evt) => {
+    this.group.on('mouseout', evt => {
       document.body.style.cursor = 'default'
       this.square.shadowEnabled(false)
     })
-    this.group.on('dragend', (evt) => {
+    this.group.on('dragend', evt => {
       this.group.fire('datachange', {}, true)
     })
   }
@@ -56,11 +56,11 @@ export default class KonvaCheckBox {
 
       textarea.value = this.labelText.text()
       textarea.style.position = 'absolute'
-      textarea.style.top = (textPosition.y - 5) + 'px'
-      textarea.style.left = (textPosition.x - 5) + 'px'
+      textarea.style.top = textPosition.y - 5 + 'px'
+      textarea.style.left = textPosition.x - 5 + 'px'
       textarea.style.width = this.labelText.width()
       textarea.focus()
-      textarea.addEventListener('keydown', (evt) => {
+      textarea.addEventListener('keydown', evt => {
         // hide on enter
         if (evt.keyCode === 13) {
           this.labelText.text(textarea.value)
@@ -78,7 +78,7 @@ export default class KonvaCheckBox {
       x: fontSize + 5,
       y: 0,
       text: label,
-      fontSize: fontSize,
+      fontSize,
       fill: 'black',
       name: 'label checkbox_label cloneable'
     })
@@ -86,8 +86,8 @@ export default class KonvaCheckBox {
     const square = new Konva.Text({
       x: 0,
       y: 0,
-      text: "\uf0c8",
-      fontSize: fontSize,
+      text: '\uf0c8',
+      fontSize,
       fontFamily: 'FontAwesome',
       fill: 'black',
       shadowBlur: 4,
@@ -97,7 +97,7 @@ export default class KonvaCheckBox {
       cornerRadius: 2,
       shadowEnabled: false,
       name: 'square checkbox_square cloneable'
-    });
+    })
     group.add(square)
     group.add(labelText)
 
