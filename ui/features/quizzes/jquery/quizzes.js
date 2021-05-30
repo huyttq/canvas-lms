@@ -1098,9 +1098,10 @@ export const quiz = (window.quiz = {
       const $ksonData = $formQuestion.find("input[name='kson_data']")
       const $backgroundUrl = $formQuestion.find('.background_url_input')
       const containerEle = $formQuestion.find('.illustrating_editor')[0]
-      if (!$backgroundUrl.val()) {
-        $backgroundUrl.val('http://localhost:3000/files/750/download?download_frd=1')
-      }
+      const $loadButton = $formQuestion.find('#load_konva_background_button')
+      // if (loadButton
+      //   $backgroundUrl.val('http://localhost:3000/files/750/download?download_frd=1')
+      // }
       $formQuestion.find('.konva_illustrating_question').show()
       const konvaCtrl = new KonvaControl(containerEle, (jsonData) => {
         $ksonData.val(jsonData)
@@ -1109,8 +1110,10 @@ export const quiz = (window.quiz = {
       konvaCtrl.addContextMenu()
       konvaCtrl.addTransformer()
 
-      $('.load_url_button').click(evt => {
-        $formQuestion.find('.illustrating_editor').empty()
+      $loadButton.unbind('click')
+      $loadButton.click(function(evt) {
+        konvaCtrl.clear()
+        containerEle.innerHTML = ''
         konvaCtrl.drawBackgroundWithSampleObjects($backgroundUrl.val(), 600, 720)
         konvaCtrl.addContextMenu()
         konvaCtrl.addTransformer()
@@ -1124,6 +1127,7 @@ export const quiz = (window.quiz = {
         $answers.filter(':first').addClass('correct_answer')
       }
     }
+
     $form.find('.answer').each(function() {
       let weight = 0
       if ($(this).hasClass('correct_answer')) {

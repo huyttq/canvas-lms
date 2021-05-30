@@ -1,6 +1,6 @@
 import Konva from 'konva'
 
-export default class KonvaCheckBox {
+export default class KanCheckBox {
   constructor(containerElement, group, editable) {
     this.containerElement = containerElement
     this.editable = editable
@@ -13,7 +13,7 @@ export default class KonvaCheckBox {
     }
   }
 
-  getKonvaControl() {
+  toKonvaNode() {
     return this.group
   }
 
@@ -101,8 +101,12 @@ export default class KonvaCheckBox {
     group.add(square)
     group.add(labelText)
 
-    const checkbox = new KonvaCheckBox(containerElement, group, true)
+    const checkbox = new KanCheckBox(containerElement, group, true)
     checkbox.enableTextEditor()
     return checkbox
+  }
+
+  static convert(containerElement, group, editable) {
+    return new KanCheckBox(containerElement, group, editable)
   }
 }
