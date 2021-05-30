@@ -1106,7 +1106,7 @@ export const quiz = (window.quiz = {
       const konvaCtrl = new KonvaControl(containerEle, (jsonData) => {
         $ksonData.val(jsonData)
       })
-      konvaCtrl.draw($backgroundUrl.val(), $ksonData.val(), true)
+      konvaCtrl.draw($backgroundUrl.val(), $ksonData.val(), true, false)
       konvaCtrl.addContextMenu()
       konvaCtrl.addTransformer()
 

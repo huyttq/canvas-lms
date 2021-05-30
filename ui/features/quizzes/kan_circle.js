@@ -2,12 +2,11 @@ import Konva from 'konva'
 import uuid from 'uuid'
 
 export default class KanCircle {
-  constructor(circleNode, editable) {
-    this.editable = editable
+  constructor(circleNode, readonly) {
     this.circleNode = circleNode
 
-    this.circleNode.draggable(editable)
-    if (editable) {
+    this.circleNode.draggable(!readonly)
+    if (!readonly) {
       this.registerEvents()
     }
   }
@@ -26,7 +25,7 @@ export default class KanCircle {
 
   registerEvents() {
     this.circleNode.on('dragstart', evt => {
-      // this.tooltip.hide()
+      this.circleNode.fire('hidetooltip', {}, true)
     })
     this.circleNode.on('dragend', evt => {
       this.circleNode.fire('datachange', {}, true)
@@ -36,21 +35,14 @@ export default class KanCircle {
       shape.scaleX(1.2)
       shape.scaleY(1.2)
       document.body.style.cursor = 'pointer'
-
-      // const mousePos = this.stage.getPointerPosition()
-      // this.tooltip.position({
-      //   x: mousePos.x + 5,
-      //   y: mousePos.y + 5
-      // })
-      // this.tooltipText.text('Drag the circle to the body position')
-      // this.tooltip.show()
+      this.circleNode.fire('showtooltip', {message: 'Drag the circle to the body position'}, true)
     })
     this.circleNode.on('mouseout', evt => {
       const shape = evt.target
       document.body.style.cursor = 'default'
       shape.scaleX(1)
       shape.scaleY(1)
-      // this.tooltip.hide()
+      this.circleNode.fire('hidetooltip', {}, true)
     })
   }
 
@@ -64,10 +56,10 @@ export default class KanCircle {
       ...config
     })
 
-    return new KanCircle(circleNode, true)
+    return new KanCircle(circleNode, false)
   }
 
-  static convert(circleNode, editable) {
-    return new KanCircle(circleNode, editable)
+  static convert(circleNode, readonly) {
+    return new KanCircle(circleNode, readonly)
   }
 }

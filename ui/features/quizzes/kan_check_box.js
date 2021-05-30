@@ -1,15 +1,18 @@
 import Konva from 'konva'
 
 export default class KanCheckBox {
-  constructor(containerElement, group, editable) {
+  constructor(containerElement, group, editable, readonly) {
     this.containerElement = containerElement
     this.editable = editable
     this.group = group
     this.labelText = group.findOne('.label')
     this.square = group.findOne('.square')
     this.group.draggable(editable)
-    if (editable) {
+    if (!readonly) {
       this.registerEvents()
+      if (editable) {
+        this.enableTextEditor()
+      }
     }
   }
 
@@ -27,12 +30,13 @@ export default class KanCheckBox {
 
   registerEvents() {
     // reset events if any
-    this.group.off('click dblclick dbltap mouseover mouseout')
+    this.group.off('click mouseover mouseout')
 
     this.group.on('click', evt => {
       const curText = this.square.text()
       this.square.text(curText === '\uf14a' ? '\uf0c8' : '\uf14a')
       this.square.fill(this.square.fill() === 'black' ? 'green' : 'black')
+      this.group.fire('datachange', {}, true)
     })
     this.group.on('mouseover', evt => {
       document.body.style.cursor = 'pointer'
@@ -42,12 +46,15 @@ export default class KanCheckBox {
       document.body.style.cursor = 'default'
       this.square.shadowEnabled(false)
     })
-    this.group.on('dragend', evt => {
-      this.group.fire('datachange', {}, true)
-    })
   }
 
   enableTextEditor() {
+    this.group.off('dblclick dbltap')
+
+    this.group.on('dragend', evt => {
+      this.group.fire('datachange', {}, true)
+    })
+
     this.group.on('dblclick dbltap', () => {
       const textPosition = this.labelText.getAbsolutePosition()
       // create textarea and style it
@@ -101,12 +108,12 @@ export default class KanCheckBox {
     group.add(square)
     group.add(labelText)
 
-    const checkbox = new KanCheckBox(containerElement, group, true)
+    const checkbox = new KanCheckBox(containerElement, group, true, false)
     checkbox.enableTextEditor()
     return checkbox
   }
 
-  static convert(containerElement, group, editable) {
-    return new KanCheckBox(containerElement, group, editable)
+  static convert(containerElement, group, editable, readonly) {
+    return new KanCheckBox(containerElement, group, editable, readonly)
   }
 }

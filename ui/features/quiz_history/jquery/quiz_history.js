@@ -474,6 +474,6 @@ $(document).ready(function () {
     const containerEle = $(this).find('.illustrating_editor')[0]
 
     const konvaCtrl = new KonvaControl(containerEle, () => {})
-    konvaCtrl.draw(backgroundUrl, ksonData, false)
+    konvaCtrl.draw(backgroundUrl, ksonData, false, true)
   })
 })

@@ -3,6 +3,7 @@ import KanCheckBox from './kan_check_box'
 import KanText from './kan_text'
 import KanCircle from './kan_circle'
 import KanHelper from './kan_helper'
+import KanTooltip from './kan_tooltip'
 
 export default class KonvaControl {
   constructor(containerElement, callback) {
@@ -11,31 +12,9 @@ export default class KonvaControl {
     this.callback = callback
     this.backgroundId = 'backgroundImage'
     this.editableLayerId = 'editableLayer'
-    this.tooltipText = new Konva.Text({
-      text: '',
-      fontFamily: 'Calibri',
-      fontSize: 12,
-      padding: 5,
-      fill: 'black'
-    })
-
-    this.tooltip = new Konva.Label({
-      x: 180,
-      y: 150,
-      opacity: 0.75,
-      visible: false
-    })
-
-    this.tooltip.add(
-      new Konva.Tag({
-        fill: 'yellow'
-      })
-    )
-    this.tooltip.add(this.tooltipText)
-
+    this.tooltip = null
     // context menu
     this.currentShape = null
-
     this.MIN_WIDTH = 20
   }
 
@@ -45,7 +24,7 @@ export default class KonvaControl {
     }
   }
 
-  draw(backgroundUrl, ksonData, editable) {
+  draw(backgroundUrl, ksonData, editable, readonly) {
     if (!backgroundUrl) {
       console.log('background url is null')
       return
@@ -56,9 +35,6 @@ export default class KonvaControl {
     }
 
     this.stage = Konva.Node.create(ksonData, this.containerElement)
-    this.stage.on('datachange', evt => {
-      this.callback(this.stage.toJSON())
-    })
 
     const imageObj = new Image()
     imageObj.onload = () => {
@@ -68,20 +44,20 @@ export default class KonvaControl {
 
     const editableLayer = this.stage.findOne(`#${this.editableLayerId}`)
     editableLayer.find('.input_circle').forEach(cir => {
-      KanCircle.convert(cir, editable)
+      KanCircle.convert(cir, readonly)
     })
     editableLayer.find('.input_text').forEach(textNode => {
-      KanText.convert(this.containerElement, textNode, editable)
+      KanText.convert(this.containerElement, textNode, editable, readonly)
     })
     editableLayer.find('.checkbox').forEach(groupNode => {
-      KanCheckBox.convert(this.containerElement, groupNode, editable)
+      KanCheckBox.convert(this.containerElement, groupNode, editable, readonly)
     })
 
-    if (editable) {
-      const tooltipLayer = new Konva.Layer()
-      tooltipLayer.add(this.tooltip)
-      this.stage.add(tooltipLayer)
-    }
+    const tooltipLayer = new Konva.Layer()
+    this.tooltip = new KanTooltip(tooltipLayer)
+    this.stage.add(tooltipLayer)
+    this.tooltip.hide()
+    this.registerEvents()
   }
 
   drawBackgroundWithSampleObjects(backgroundUrl, width, height) {
@@ -93,15 +69,11 @@ export default class KonvaControl {
       width,
       height
     })
-    this.stage.on('datachange', evt => {
-      this.callback(this.stage.toJSON())
-    })
 
     const backgroundLayer = new Konva.Layer()
     const editableLayer = new Konva.Layer({
       id: this.editableLayerId
     })
-    const tooltipLayer = new Konva.Layer()
 
     editableLayer.add(this.createCircleInput(400, 350))
     editableLayer.add(this.createCircleInput(500, 350))
@@ -112,8 +84,12 @@ export default class KonvaControl {
 
     this.stage.add(backgroundLayer)
     this.stage.add(editableLayer)
-    tooltipLayer.add(this.tooltip)
+
+    const tooltipLayer = new Konva.Layer()
+    this.tooltip = new KanTooltip(tooltipLayer)
     this.stage.add(tooltipLayer)
+
+    this.registerEvents()
     // http://localhost:3000/files/744/download?download_frd=1
     // try to draw SVG natively
     Konva.Image.fromURL(backgroundUrl, imageNode => {
@@ -133,7 +109,7 @@ export default class KonvaControl {
       fill: 'red',
       stroke: 'red',
       dragBoundFunc: pos => {
-        return this.dragBoundFunc(pos, kanCircle.width(), kanCircle.height())
+        return KanHelper.dragBoundFunc(pos, kanCircle.width(), kanCircle.height(), this.stage.width(), this.stage.height())
       }
     })
     return kanCircle.toKonvaNode()
@@ -145,7 +121,7 @@ export default class KonvaControl {
       y,
       width,
       dragBoundFunc: pos => {
-        return this.dragBoundFunc(pos, kanText.width(), kanText.height())
+        return KanHelper.dragBoundFunc(pos, kanText.width(), kanText.height(), this.stage.width(), this.stage.height())
       }
     })
     return kanText.toKonvaNode()
@@ -160,28 +136,13 @@ export default class KonvaControl {
         y: 300,
         name: 'cloneable checkbox',
         dragBoundFunc: pos => {
-          return this.dragBoundFunc(pos, checkbox.width(), checkbox.height())
+          return KanHelper.dragBoundFunc(pos, checkbox.width(), checkbox.height(), this.stage.width(), this.stage.height())
         }
       },
       'Hello world!',
       16
     )
     return checkbox.toKonvaNode()
-  }
-
-  dragBoundFunc(pos, shapeWidth, shapeHeight) {
-    // console.log(`drag event ${shapeWidth} ${this.stage.width()}`)
-    const maxX = this.stage.width() - shapeWidth
-    const maxY = this.stage.height() - shapeHeight
-    let newX = pos.x > maxX ? maxX : pos.x
-    newX = newX < 0 ? 0 : newX
-
-    let newY = pos.y > maxY ? maxY : pos.y
-    newY = newY < 0 ? 0 : newY
-    return {
-      x: newX,
-      y: newY
-    }
   }
 
   addContextMenu() {
@@ -225,9 +186,9 @@ export default class KonvaControl {
           if (!this.currentShape.hasName('cloneable')) return
 
           const mousePos = this.stage.getPointerPosition()
-          const clone = KanHelper.clone(this.containerElement, this.currentShape, mousePos)
+          const clone = KanHelper.clone(this.containerElement, this.stage, this.currentShape, mousePos)
           const editableLayer = this.stage.findOne(`#${this.editableLayerId}`)
-          if (this.currentShape.hasName('tranformable')) {
+          if (this.currentShape.hasName('transformable')) {
             editableLayer.add(this.createTransformer(clone))
           }
           editableLayer.add(clone)
@@ -266,6 +227,20 @@ export default class KonvaControl {
     const editableLayer = this.stage.findOne(`#${this.editableLayerId}`)
     editableLayer.find('.transformable').forEach(node => {
       editableLayer.add(this.createTransformer(node))
+    })
+  }
+
+  registerEvents() {
+    this.stage.on('datachange', evt => {
+      this.callback(this.stage.toJSON())
+    })
+
+    this.stage.on('showtooltip', evt => {
+      this.tooltip.show(evt.message, this.stage.getPointerPosition())
+    })
+
+    this.stage.on('hidetooltip', evt => {
+      this.tooltip.hide()
     })
   }
 }

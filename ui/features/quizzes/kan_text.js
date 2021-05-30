@@ -2,16 +2,18 @@ import Konva from 'konva'
 import uuid from 'uuid'
 
 export default class KanText {
-  constructor(containerElement, textNode, editable) {
+  constructor(containerElement, textNode, editable, readonly) {
     this.containerElement = containerElement
     this.editable = editable
     this.textNode = textNode
     this.MIN_WIDTH = 20
 
     this.textNode.draggable(editable)
-    if (editable) {
+    if (!readonly) {
       this.registerEvents()
-      this.enableTextEditor()
+      if (editable) {
+        this.enableTextEditor()
+      }
     }
   }
 
@@ -28,42 +30,16 @@ export default class KanText {
   }
 
   registerEvents() {
+    this.textNode.off('dblclick dbltap')
+
     this.textNode.on('mouseover', evt => {
       document.body.style.cursor = 'pointer'
-      // const mousePos = this.textNode.getPointerPosition()
-      // this.tooltip.position({
-      //   x: mousePos.x + 5,
-      //   y: mousePos.y + 5
-      // })
-      // this.tooltipText.text('Double click to edit then press Enter')
-      // this.tooltip.show()
+      this.textNode.fire('showtooltip', {message: 'Double click to edit then press Enter'}, true)
     })
     this.textNode.on('mouseout', evt => {
       document.body.style.cursor = 'default'
-      // this.tooltip.hide()
+      this.textNode.fire('hidetooltip', {}, true)
     })
-    this.textNode.on('dragstart', evt => {
-      // this.tooltip.hide()
-    })
-    this.textNode.on('dragend', evt => {
-      // this.callback(this.stage.toJSON())
-      this.textNode.fire('datachange', {}, true)
-    })
-
-    this.textNode.on('transform', () => {
-      // with enabled anchors we can only change scaleX
-      // so we don't need to reset height
-      // just width
-      this.textNode.setAttrs({
-        width: Math.max(this.textNode.width() * this.textNode.scaleX(), this.MIN_WIDTH),
-        scaleX: 1,
-        scaleY: 1
-      })
-    })
-  }
-
-  enableTextEditor() {
-    this.textNode.off('dblclick dbltap')
     this.textNode.on('dblclick dbltap', () => {
       const textPosition = this.textNode.getAbsolutePosition()
       // create textarea and style it
@@ -87,6 +63,26 @@ export default class KanText {
     })
   }
 
+  enableTextEditor() {
+    this.textNode.on('dragstart', evt => {
+      this.textNode.fire('hidetooltip', {}, true)
+    })
+    this.textNode.on('dragend', evt => {
+      this.textNode.fire('datachange', {}, true)
+    })
+
+    this.textNode.on('transform', () => {
+      // with enabled anchors we can only change scaleX
+      // so we don't need to reset height
+      // just width
+      this.textNode.setAttrs({
+        width: Math.max(this.textNode.width() * this.textNode.scaleX(), this.MIN_WIDTH),
+        scaleX: 1,
+        scaleY: 1
+      })
+    })
+  }
+
   static create(containerElement, config) {
     const textNode = new Konva.Text({
       id: uuid(),
@@ -98,10 +94,10 @@ export default class KanText {
       ...config
     })
 
-    return new KanText(containerElement, textNode, true)
+    return new KanText(containerElement, textNode, true, false)
   }
 
-  static convert(containerElement, textNode, editable) {
-    return new KanText(containerElement, textNode, editable)
+  static convert(containerElement, textNode, editable, readonly) {
+    return new KanText(containerElement, textNode, editable, readonly)
   }
 }

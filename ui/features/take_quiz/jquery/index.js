@@ -953,7 +953,7 @@ $(function() {
     const konvaCtrl = new KonvaControl(containerEle, (jsonData) => {
       $questionInput.val(jsonData).trigger('change')
     })
-    konvaCtrl.draw(backgroundUrl, userAnswer, true)
+    konvaCtrl.draw(backgroundUrl, userAnswer, false, false)
   })
 
   if (quizTakingPolice) {
