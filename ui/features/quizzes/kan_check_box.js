@@ -7,6 +7,7 @@ export default class KanCheckBox {
     this.group = group
     this.labelText = group.findOne('.label')
     this.square = group.findOne('.square')
+    this.square.shadowEnabled(false)
     this.group.draggable(editable)
     if (!readonly) {
       this.registerEvents()
@@ -49,7 +50,7 @@ export default class KanCheckBox {
   }
 
   enableTextEditor() {
-    this.group.off('dblclick dbltap')
+    this.group.off('dblclick dbltap click')
 
     this.group.on('dragend', evt => {
       this.group.fire('datachange', {}, true)
