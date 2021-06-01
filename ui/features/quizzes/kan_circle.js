@@ -9,6 +9,7 @@ export default class KanCircle {
     if (!readonly) {
       this.registerEvents()
     }
+    this.circleNode.scale({x: 1, y: 1})
   }
 
   toKonvaNode() {

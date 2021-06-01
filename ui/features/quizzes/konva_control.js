@@ -140,7 +140,6 @@ export default class KonvaControl {
     const checkbox = KanCheckBox.create(
       this.containerElement,
       {
-        id: 'chk1',
         x: 100,
         y: 300,
         name: 'cloneable checkbox',

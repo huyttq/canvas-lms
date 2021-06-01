@@ -1,4 +1,5 @@
 import Konva from 'konva'
+import uuid from 'uuid'
 
 export default class KanCheckBox {
   constructor(containerElement, group, editable, readonly) {
@@ -92,6 +93,7 @@ export default class KanCheckBox {
     })
 
     const square = new Konva.Text({
+      id: uuid(),
       x: 0,
       y: 0,
       text: '\uf0c8',
