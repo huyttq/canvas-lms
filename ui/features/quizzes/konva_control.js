@@ -39,6 +39,11 @@ export default class KonvaControl {
     const imageObj = new Image()
     imageObj.onload = () => {
       this.stage.findOne('#' + this.backgroundId).image(imageObj)
+      const $wrapperEle = $('.illustrating_editor')
+      const scale = $wrapperEle.width()/this.stage.width()
+      if (scale < 1) {
+        this.stage.scale({ x: scale, y: scale})
+      }
     }
     imageObj.src = backgroundUrl
 
@@ -60,14 +65,14 @@ export default class KonvaControl {
     this.registerEvents()
   }
 
-  drawBackgroundWithSampleObjects(backgroundUrl, width, height) {
+  drawBackgroundWithSampleObjects(backgroundUrl) {
     if (this.stage) {
       this.stage.clear()
     }
     this.stage = new Konva.Stage({
       container: this.containerElement,
-      width,
-      height
+      width: 100, //not matter but drawImage requires
+      height: 100
     })
 
     const backgroundLayer = new Konva.Layer()
@@ -94,11 +99,15 @@ export default class KonvaControl {
     // try to draw SVG natively
     Konva.Image.fromURL(backgroundUrl, imageNode => {
       imageNode.setAttrs({
-        id: this.backgroundId,
-        width,
-        height
+        id: this.backgroundId
       })
       backgroundLayer.add(imageNode)
+      const $wrapperEle = $('.illustrating_editor')
+      const scale = $wrapperEle.width() / imageNode.width()
+      const stageWidth = scale < 1 ? imageNode.width() * scale : imageNode.width()
+      const stageHeight = scale < 1 ? imageNode.height() * scale : imageNode.height()
+      this.stage.width(stageWidth)
+      this.stage.height(stageHeight)
     })
   }
 
@@ -175,6 +184,7 @@ export default class KonvaControl {
           evt.preventDefault()
           this.currentShape.transformsEnabled('none')
           this.currentShape.destroy()
+          this.stage.fire('datachange')
           $('#konva_context_menu').hide()
         })
       }
@@ -192,7 +202,7 @@ export default class KonvaControl {
             editableLayer.add(this.createTransformer(clone))
           }
           editableLayer.add(clone)
-
+          this.stage.fire('datachange')
           $('#konva_context_menu').hide()
         })
       }
