@@ -1114,7 +1114,7 @@ export const quiz = (window.quiz = {
       $loadButton.click(function(evt) {
         konvaCtrl.clear()
         containerEle.innerHTML = ''
-        konvaCtrl.drawBackgroundWithSampleObjects($backgroundUrl.val(), 600, 720)
+        konvaCtrl.drawBackgroundWithSampleObjects($backgroundUrl.val())
         konvaCtrl.addContextMenu()
         konvaCtrl.addTransformer()
       })
