@@ -7,6 +7,7 @@ import KanTooltip from './kan_tooltip'
 
 export default class KonvaControl {
   constructor(containerElement, callback) {
+    this.VERSION = '1'
     this.containerElement = containerElement
     this.stage = null
     this.callback = callback
@@ -72,7 +73,8 @@ export default class KonvaControl {
     this.stage = new Konva.Stage({
       container: this.containerElement,
       width: 100, //not matter but drawImage requires
-      height: 100
+      height: 100,
+      version: this.VERSION
     })
 
     const backgroundLayer = new Konva.Layer()
@@ -108,6 +110,7 @@ export default class KonvaControl {
       const stageHeight = scale < 1 ? imageNode.height() * scale : imageNode.height()
       this.stage.width(stageWidth)
       this.stage.height(stageHeight)
+      this.stage.fire('datachange')
     })
   }
 
