@@ -40,6 +40,13 @@ export default class KonvaControl {
     const imageObj = new Image()
     imageObj.onload = () => {
       this.stage.findOne('#' + this.backgroundId).image(imageObj)
+      if (readonly) {
+        const $wrapperEle = $('.illustrating_editor')
+        const scale = $wrapperEle.width()/this.stage.width()
+        if (scale < 1) {
+          this.stage.scale({ x: scale, y: scale})
+        }
+      }
     }
     imageObj.src = backgroundUrl
 
