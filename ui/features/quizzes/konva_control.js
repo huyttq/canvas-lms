@@ -40,11 +40,6 @@ export default class KonvaControl {
     const imageObj = new Image()
     imageObj.onload = () => {
       this.stage.findOne('#' + this.backgroundId).image(imageObj)
-      const $wrapperEle = $('.illustrating_editor')
-      const scale = $wrapperEle.width()/this.stage.width()
-      if (scale < 1) {
-        this.stage.scale({ x: scale, y: scale})
-      }
     }
     imageObj.src = backgroundUrl
 
@@ -83,10 +78,9 @@ export default class KonvaControl {
     })
 
     editableLayer.add(this.createCircleInput(400, 350))
-    editableLayer.add(this.createCircleInput(500, 350))
-    editableLayer.add(this.createTextInput(150, 10, 300))
-    editableLayer.add(this.createTextInput(40, 200, 250))
-    editableLayer.add(this.createTextInput(220, 30, 300))
+    editableLayer.add(this.createTextInput(50, 10, 200))
+    editableLayer.add(this.createTextInput(50, 50, 200))
+    editableLayer.add(this.createTextInput(50, 100, 200))
     editableLayer.add(this.createCheckbox())
 
     this.stage.add(backgroundLayer)
@@ -150,8 +144,8 @@ export default class KonvaControl {
           return KanHelper.dragBoundFunc(pos, checkbox.width(), checkbox.height(), this.stage.width(), this.stage.height())
         }
       },
-      'Hello world!',
-      16
+      'Enter some text',
+      14
     )
     return checkbox.toKonvaNode()
   }
@@ -222,7 +216,7 @@ export default class KonvaControl {
       padding: 5,
       rotateEnabled: false,
       // enable only side anchors
-      enabledAnchors: ['middle-left', 'middle-right'],
+      enabledAnchors: ['middle-left', 'middle-right', 'bottom-center'],
       // limit transformer size
       boundBoxFunc: (oldBox, newBox) => {
         if (newBox.width < this.MIN_WIDTH) {

@@ -9,10 +9,15 @@ export default class KanText {
     this.MIN_WIDTH = 20
 
     this.textNode.draggable(editable)
-    if (!readonly) {
-      this.registerEvents()
+    if (readonly) {
+      this.textNode.show()
+    }
+    else {
       if (editable) {
         this.enableTextEditor()
+      }
+      else {
+        this.registerEvents()
       }
     }
   }
@@ -30,40 +35,36 @@ export default class KanText {
   }
 
   registerEvents() {
-    this.textNode.off('dblclick dbltap')
-
-    this.textNode.on('mouseover', evt => {
-      document.body.style.cursor = 'pointer'
-      this.textNode.fire('showtooltip', {message: 'Double click to edit then press Enter'}, true)
+    const textarea = $('<textarea rows="1"></textarea>')
+    textarea.val(this.textNode.text())
+    const self = this
+    textarea.on('input', function() {
+      this.parentNode.dataset.replicatedValue = this.value
+      self.textNode.text(this.value)
+      self.textNode.fire('datachange', {}, true)
     })
-    this.textNode.on('mouseout', evt => {
-      document.body.style.cursor = 'default'
-      this.textNode.fire('hidetooltip', {}, true)
-    })
-    this.textNode.on('dblclick dbltap', () => {
-      const textPosition = this.textNode.getAbsolutePosition()
-      // create textarea and style it
-      const textarea = document.createElement('textarea')
-      $(this.containerElement).append(textarea)
-
-      textarea.value = this.textNode.text()
-      textarea.style.position = 'absolute'
-      textarea.style.top = textPosition.y - 5 + 'px'
-      textarea.style.left = textPosition.x - 5 + 'px'
-      textarea.style.width = this.textNode.width()
-      textarea.focus()
-      textarea.addEventListener('keydown', evt => {
-        // hide on enter
-        if (evt.keyCode === 13) {
-          this.textNode.text(textarea.value)
-          this.textNode.fire('datachange', {}, true)
-          $(textarea).remove()
-        }
-      })
-    })
+    const autoGrowTextareaWrapper = $('<div class="grow-wrap"></<div>')
+    const textPosition = this.textNode.getAbsolutePosition()
+    autoGrowTextareaWrapper.css('position', 'absolute')
+    autoGrowTextareaWrapper.css('top', textPosition.y - 5 + 'px')
+    autoGrowTextareaWrapper.css('left', textPosition.x - 5 + 'px')
+    textarea.css('width', this.textNode.width())
+    textarea.css('max-height', this.textNode.height() + 2)
+    autoGrowTextareaWrapper.append(textarea)
+    $(this.containerElement).append(autoGrowTextareaWrapper)
+    // do not show konva text here
+    this.textNode.hide()
+    textarea.trigger('input')
   }
 
   enableTextEditor() {
+    this.textNode.on('mouseover', evt => {
+      document.body.style.cursor = 'pointer'
+    })
+    this.textNode.on('mouseout', evt => {
+      document.body.style.cursor = 'default'
+    })
+
     this.textNode.on('dragstart', evt => {
       this.textNode.fire('hidetooltip', {}, true)
     })
@@ -72,11 +73,9 @@ export default class KanText {
     })
 
     this.textNode.on('transform', () => {
-      // with enabled anchors we can only change scaleX
-      // so we don't need to reset height
-      // just width
       this.textNode.setAttrs({
         width: Math.max(this.textNode.width() * this.textNode.scaleX(), this.MIN_WIDTH),
+        height: Math.max(this.textNode.height() * this.textNode.scaleY(), 10),
         scaleX: 1,
         scaleY: 1
       })
