@@ -930,7 +930,7 @@ export const quiz = (window.quiz = {
       .css('display', '')
       .end()
     $formQuestion
-      .find('.illustrating_question')
+      .find('.konva_illustrating_question')
       .hide()
     if (is_survey_quiz) {
       $formQuestion
