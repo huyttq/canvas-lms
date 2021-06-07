@@ -191,7 +191,10 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
             if questionDef["question_type"] == 'multiple_dropdowns_question'
               question_guids = questionDef["question_text"].scan /#{qid}_\S{32}/
               multiple_answer_keys = sd.keys.select {|i| i.start_with? 'answer_id_for_'}
-              question_guids.each_with_index {|m, index| res[m] = sd[multiple_answer_keys[index]]}
+              question_guids.each_with_index { |qid_guid|
+                q_key = find_matching_key(multiple_answer_keys, qid_guid)
+                res[qid_guid] = sd[q_key] unless q_key.nil?
+              }
 
             elsif questionDef["question_type"] == 'multiple_answers_question'
               # {"correct"=>true, "points"=>1.0, "question_id"=>12, "text"=>"", "answer_208"=>"1", "answer_4976"=>"0", "answer_4019"=>"1", "answer_8312"=>"0"}
@@ -212,12 +215,15 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
 
               question_guids = questionDef["question_text"].scan /#{qid}_\S{32}/
               multiple_answer_keys = sd.keys.select {|i| i.start_with? 'answer_id_for_'}
-              question_guids.each_with_index { |guid, index|
-                answerId = sd[multiple_answer_keys[index]]
-                answer = answers.find {|q| q["id"] == answerId}
+              question_guids.each_with_index { |qid_guid|
+                q_key = find_matching_key(multiple_answer_keys, qid_guid)
+                unless q_key.nil?
+                  answerId = sd[q_key]
+                  answer = answers.find {|q| q["id"] == answerId}
 
-                if answer["weight"] == 100.0 && res[guid].nil? #IMPORTANT: do not override auto-save user answers
-                  res[guid] = answerId
+                  if answer["weight"] == 100.0 && res[qid_guid].nil? #IMPORTANT: do not override auto-save user answers
+                    res[qid_guid] = answerId
+                  end
                 end
               }
             elsif (questionDef["question_type"] == 'essay_question' || questionDef["question_type"] == 'illustrating_question') && res[qid].nil?
@@ -232,6 +238,11 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
     logger.debug "#############################RESULT AFTER mod: #{res.inspect}"
 
     return res
+  end
+
+  def find_matching_key(multiple_answer_keys, qid_guid)
+    guid = (qid_guid.split "_").last
+    multiple_answer_keys.find {|answer_key| AssessmentQuestion.variable_id((answer_key.split '_').last) == guid}
   end
 
   def question_answered?(id)
