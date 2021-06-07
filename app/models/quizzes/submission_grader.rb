@@ -37,9 +37,9 @@ module Quizzes
 
       @submission.questions.each do |q|
         user_answer = self.class.score_question(q, data)
-        # copy all answers having score from last marking, apply ONLY for ESSAY or FILE UPlOAD questions
+        # copy all answers having score from last marking, apply ONLY for ESSAY/ILLUSTRATING or FILE UPlOAD questions
         if !lastAttempt.nil?
-          if q["question_type"] == 'file_upload_question' || q["question_type"] == 'essay_question'
+          if q["question_type"] == 'file_upload_question' || q["question_type"] == 'essay_question' || q["question_type"] == 'illustrating_question'
             last_submission = lastAttempt.submission_data
 
             sd = last_submission.find {|k| k["question_id"] == user_answer[:question_id]}
