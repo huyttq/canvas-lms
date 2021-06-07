@@ -472,21 +472,21 @@ module QuizzesHelper
   def multiple_dropdowns_question(options)
     question = hash_get(options, :question)
     answers  = hash_get(options, :answers)
+
     answer_list = hash_get(options, :answer_list)
+
     editable = hash_get(options, :editable)
     res      = user_content hash_get(question, :question_text)
     index  = 0
     doc = Nokogiri::HTML5.fragment(res)
     selects = doc.css(".question_input")
     selects.each do |s|
+      question_id = s["name"]
       if answer_list && !answer_list.empty?
-        a = answer_list[index]
-        index += 1
+        a = hash_get(answer_list, question_id)
       else
-        question_id = s["name"]
         a = hash_get(answers, question_id)
       end
-
       if editable
         # If existing answer is one of the options, select it
         if (opt_tag = s.children.css("option[value='#{a}']").first)
@@ -508,6 +508,10 @@ module QuizzesHelper
       s['aria-label'] = I18n.t("Multiple dropdowns, read surrounding text")
     end
     doc.to_s.html_safe
+  end
+
+  def get_question_id(question, var)
+    "question_#{hash_get(question, "id")}_#{AssessmentQuestion.variable_id(var)}"
   end
 
   def duration_in_minutes(duration_seconds)
