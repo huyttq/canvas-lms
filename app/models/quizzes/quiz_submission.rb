@@ -165,79 +165,85 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
     raise "Cannot view temporary data for completed quiz" unless !self.completed?
     raise "Cannot view temporary data for completed quiz" if graded?
     res = (self.submission_data || {}).with_indifferent_access
-    logger.debug "----------RESULT before mod: #{res.inspect}"
 
+    if !self.submitted_attempts&.last.nil?
+      self.submitted_attempts.last.merge_submission_data(res)
+    end
+
+    return res
+  end
+
+  def merge_submission_data(new_submission_data)
+    #IMPORTANT: only copy answers from last attempt when user taking the quiz (not resuming)
+    should_copy_answer = new_submission_data.empty?
     begin
-      unless self.submitted_attempts.nil? && self.submitted_attempts.last.nil?
-        lastAttempt = self.submitted_attempts.last
-        quizData = lastAttempt.quiz_data
+      self.submission_data.each { |tmp|
+        #tmp {:correct=>true, :points=>1.0, :question_id=>13, :text=>"", :answer_for_question1=>2703, :answer_id_for_question1=>2703, :answer_for_question2=>3305, :answer_id_for_question2=>3305}
+        # multiple choice question use symbol not string
+        question_submission = tmp.stringify_keys
+        # logger.debug "----------tmp.stringify_keys: #{tmp.inspect}"
 
-        last_submission = lastAttempt.submission_data
-        last_submission.each { |tmp|
-          #tmp {:correct=>true, :points=>1.0, :question_id=>13, :text=>"", :answer_for_question1=>2703, :answer_id_for_question1=>2703, :answer_for_question2=>3305, :answer_id_for_question2=>3305}
-          # multiple choice question use symbol not string
-          sd = tmp.stringify_keys
-          logger.debug "----------tmp.stringify_keys: #{tmp.inspect}"
+        question_def = self.quiz_data.find {|q| q["id"] == question_submission["question_id"]}
+        # logger.debug "----------question_def: #{question_def.inspect}"
 
-          questionDef = quizData.find {|q| q["id"] == sd["question_id"]}
-          logger.debug "----------questionDef: #{questionDef.inspect}"
+        qid = 'question_' + question_submission["question_id"].to_s
+        is_correct = question_submission["correct"] == true || question_submission["points"] >= question_def["points_possible"]
 
-          qid = 'question_' + sd["question_id"].to_s
-          isCorrect = sd["correct"] == true || sd["points"] >= questionDef["points_possible"]
-
-          if (isCorrect)
-            res[qid + '_locked'] = "true" # hide it from user so he/she cannot update correct answers
-
-            if questionDef["question_type"] == 'multiple_dropdowns_question'
-              question_guids = questionDef["question_text"].scan /#{qid}_\S{32}/
-              multiple_answer_keys = sd.keys.select {|i| i.start_with? 'answer_id_for_'}
-              question_guids.each_with_index { |qid_guid|
+        if (is_correct)
+          new_submission_data[qid + '_locked'] = "true" # hide it from user so he/she cannot update correct answers
+          if should_copy_answer
+            if question_def["question_type"] == 'multiple_dropdowns_question'
+              question_guids = question_def["question_text"].scan /#{qid}_\S{32}/
+              multiple_answer_keys = question_submission.keys.select {|i| i.start_with? 'answer_id_for_'}
+              question_guids.each { |qid_guid|
                 q_key = find_matching_key(multiple_answer_keys, qid_guid)
-                res[qid_guid] = sd[q_key] unless q_key.nil?
+                new_submission_data[qid_guid] = question_submission[q_key] unless q_key.nil?
               }
 
-            elsif questionDef["question_type"] == 'multiple_answers_question'
+            elsif question_def["question_type"] == 'multiple_answers_question'
               # {"correct"=>true, "points"=>1.0, "question_id"=>12, "text"=>"", "answer_208"=>"1", "answer_4976"=>"0", "answer_4019"=>"1", "answer_8312"=>"0"}
-              multiple_answer_keys = sd.keys.select {|i| i.start_with? 'answer_'}
-              multiple_answer_keys.each {|k| res[qid + '_' + k] = sd[k].to_i}
+              multiple_answer_keys = question_submission.keys.select {|i| i.start_with? 'answer_'}
+              multiple_answer_keys.each {|k| new_submission_data[qid + '_' + k] = question_submission[k].to_i}
 
-            elsif questionDef["question_type"] == 'file_upload_question'
-              res[qid] = sd['attachment_ids']
+            elsif question_def["question_type"] == 'file_upload_question'
+              new_submission_data[qid] = question_submission['attachment_ids']
             else
               # essay question/multiple choice
-              res[qid] = sd["text"]
+              new_submission_data[qid] = question_submission["text"]
             end
-          else
-            # marked all unsatisfactory/unanswered questions
-            res[qid + '_marked'] = "true"
-            if questionDef["question_type"] == 'multiple_dropdowns_question'
-              answers = questionDef["answers"]
+          end
+        else
+          # marked all unsatisfactory/unanswered questions
+          new_submission_data[qid + '_marked'] = "true"
+          if should_copy_answer
+            if question_def["question_type"] == 'multiple_dropdowns_question'
+              answers = question_def["answers"]
 
-              question_guids = questionDef["question_text"].scan /#{qid}_\S{32}/
-              multiple_answer_keys = sd.keys.select {|i| i.start_with? 'answer_id_for_'}
-              question_guids.each_with_index { |qid_guid|
+              question_guids = question_def["question_text"].scan /#{qid}_\S{32}/
+              multiple_answer_keys = question_submission.keys.select {|i| i.start_with? 'answer_id_for_'}
+              question_guids.each { |qid_guid|
                 q_key = find_matching_key(multiple_answer_keys, qid_guid)
                 unless q_key.nil?
-                  answerId = sd[q_key]
-                  answer = answers.find {|q| q["id"] == answerId}
+                  answer_id = question_submission[q_key]
+                  answer = answers.find {|q| q["id"] == answer_id}
 
-                  if answer["weight"] == 100.0 && res[qid_guid].nil? #IMPORTANT: do not override auto-save user answers
-                    res[qid_guid] = answerId
+                  if answer["weight"] == 100.0 && new_submission_data[qid_guid].nil? #IMPORTANT: do not override auto-save user answers
+                    new_submission_data[qid_guid] = answer_id
                   end
                 end
               }
-            elsif (questionDef["question_type"] == 'essay_question' || questionDef["question_type"] == 'illustrating_question') && res[qid].nil?
-              res[qid] = sd["text"]
+            elsif (question_def["question_type"] == 'essay_question' || question_def["question_type"] == 'illustrating_question') && new_submission_data[qid].nil?
+              new_submission_data[qid] = question_submission["text"]
             end
           end
-        }
-      end
+        end
+      }
     rescue => e
       logger.error "cannot generate temporary data #{e.inspect}"
     end
-    logger.debug "#############################RESULT AFTER mod: #{res.inspect}"
 
-    return res
+    logger.debug "#############################RESULT AFTER mod: #{new_submission_data.inspect}"
+    return new_submission_data
   end
 
   def find_matching_key(multiple_answer_keys, qid_guid)

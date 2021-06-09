@@ -249,7 +249,7 @@ module Factories
       {"comments"=>"", "weight"=>0, "text"=>"n", "id"=>4764, "blank_id"=>"structure7"},
       {"comments"=>"", "weight"=>0, "text"=>"n", "id"=>3477, "blank_id"=>"structure7"},
       {"comments"=>"", "weight"=>0, "text"=>"n", "id"=>461, "blank_id"=>"structure7"}
-    ], "question_text"=>"[structure1] [event1] [structure2] [structure3] [structure4] [structure5] [structure6] [event2] [structure7]"}.with_indifferent_access
+    ], "question_text"=>"[structure4] [structure5] [structure1] [event1] [structure2] [structure3] [structure6] [event2] [structure7]"}.with_indifferent_access
   end
 
   # @param [Hash] options
