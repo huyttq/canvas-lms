@@ -86,6 +86,52 @@ describe Quizzes::SubmissionGrader do
     end
   end
 
+  context 'with manual scoring question type' do
+    describe '#grade_submission' do
+      it 'should copy the score from the last attempt' do
+        quiz_with_graded_submission([
+          {:question_data => {:name => 'question 1', :points_possible => 1, 'question_type' => 'illustrating_question'}},
+          {:question_data => {:name => 'question 2', :points_possible => 1, 'question_type' => 'illustrating_question'}},
+        ]) do
+          {
+            "text_after_answers"            => "",
+            "question_#{@questions[0].id}"  => "{ content: 'abc'}",
+            "question_#{@questions[1].id}"  => "{ content: 'def'}",
+            "context_id"                    => "#{@course.id}",
+            "context_type"                  => "Course",
+            "user_id"                       => "#{@user.id}",
+            "quiz_id"                       => "#{@quiz.id}",
+            "course_id"                     => "#{@course.id}",
+            "question_text"                 => "Lorem ipsum question",
+          }
+        end
+        @quiz_submission.update_scores({
+          'context_id' => @course.id,
+          'override_scores' => true,
+          'context_type' => 'Course',
+          'submission_version_number' => '1',
+          "question_score_#{@questions[0].id}" => "1",
+          "question_score_#{@questions[1].id}" => "0"
+        })
+        #second attempt
+        quiz_submission2 = @quiz.generate_submission(@user)
+        quiz_submission2.mark_completed
+        quiz_submission2.submission_data = {
+          "context_id"                    => "#{@course.id}",
+          "context_type"                  => "Course",
+          "user_id"                       => "#{@user.id}",
+          "quiz_id"                       => "#{@quiz.id}",
+          "course_id"                     => "#{@course.id}",
+          "question_text"                 => "Lorem ipsum question",
+          "question_#{@questions[0].id}" => "{ content: 'abc'}",
+          "question_#{@questions[1].id}" => "{ content: 'new answer'}",
+        }
+        Quizzes::SubmissionGrader.new(quiz_submission2).grade_submission
+        expect(quiz_submission2.score).to eq 1
+      end
+    end
+  end
+
   describe ".score_question" do
     it "should score a multiple_choice_question" do
       qd = multiple_choice_question_data
