@@ -200,7 +200,7 @@ export default class AssignmentRowCell extends Component {
             <AssignmentGradeInput
               assignment={this.props.assignment}
               enterGradesAs={this.props.enterGradesAs}
-              disabled={this.props.submissionIsUpdating}
+              disabled
               gradingScheme={this.props.gradingScheme}
               pendingGradeInfo={this.props.pendingGradeInfo}
               ref={this.bindGradeInput}

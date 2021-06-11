@@ -390,7 +390,7 @@ export default class SubmissionTray extends React.Component {
 
               <GradeInput
                 assignment={this.props.assignment}
-                disabled={this.props.gradingDisabled}
+                disabled
                 enterGradesAs={this.props.enterGradesAs}
                 gradingScheme={this.props.gradingScheme}
                 pendingGradeInfo={this.props.pendingGradeInfo}
