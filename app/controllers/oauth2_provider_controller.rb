@@ -168,10 +168,32 @@ class Oauth2ProviderController < ApplicationController
     render json: response
   end
 
+  def end_session
+    logout_current_user
+    redirect_to params[:post_logout_redirect_uri]
+  end
+
   def jwks
     keys = Canvas::Oauth::KeyStorage.public_keyset
     response.set_header('Cache-Control', "max-age=#{Canvas::Oauth::KeyStorage.max_cache_age}")
     render json: { keys: keys }
+  end
+
+  def metadata
+    domainConfig = config_domain_yaml[Rails.env]
+    baseUrl = "http#{domainConfig['ssl'] ? 's' : ''}://#{domainConfig['domain']}"
+    render json: {
+      issuer: "#{baseUrl}/login/oauth2",
+      authorization_endpoint: "#{baseUrl}/login/oauth2/auth",
+      token_endpoint: "#{baseUrl}/login/oauth2/token",
+      jwks_uri: "#{baseUrl}/login/oauth2/jwks",
+      registration_endpoint: "#{baseUrl}/login/oauth2/registration",
+      revocation_endpoint: "#{baseUrl}/login/oauth2/deny",
+      end_session_endpoint: "#{baseUrl}/login/oauth2/end_session",
+      response_types_supported: [
+        "code"
+      ]
+    }
   end
 
   private
@@ -190,5 +212,9 @@ class Oauth2ProviderController < ApplicationController
         !params[:grant_type] && params[:code] ? "authorization_code" : "__UNSUPPORTED_PLACEHOLDER__"
       )
     )
+  end
+
+  def config_domain_yaml
+    YAML.load(File.read(File.join(Rails.root,'config','domain.yml'))) if File.exist?(File.join(Rails.root,'config','domain.yml'))
   end
 end
