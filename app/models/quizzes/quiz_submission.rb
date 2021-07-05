@@ -679,6 +679,10 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
     self.kept_score >= self.points_possible_at_submission_time
   end
 
+  def satisfactory
+    satisfactory?
+  end
+  
   def can_take_quiz?
     !self.pending_review? && !self.satisfactory? && !self.did_not_attend_training
   end
