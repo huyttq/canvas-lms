@@ -420,6 +420,15 @@ class Quizzes::QuizSubmissionsApiController < ApplicationController
     end
   end
 
+  def temporary_data
+    unless @quiz.grants_right?(@current_user, session, :submit)
+      return render_unauthorized_action
+    end
+
+    quiz_submission = @quiz.quiz_submissions.where(user_id: @current_user).first
+    render :json => quiz_submission.temporary_data
+  end
+
 
   private
 
