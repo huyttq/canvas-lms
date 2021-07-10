@@ -55,3 +55,6 @@ schema.graphql
 /jest/
 /frontend_build/
 /public/dist/webpack-dev/
+/public/fonts/
+/public/file_removed/
+/public/javascripts/
