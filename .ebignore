@@ -11,8 +11,6 @@
 /db/*sql
 docker-compose.override.yml
 /exports/
-Gemfile.lock
-Gemfile.lock.next
 /log/
 mkmf.log
 /node_modules/
