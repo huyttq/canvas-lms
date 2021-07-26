@@ -1,0 +1,2044 @@
+@font-face {
+  font-family: "InstructureIcons-Line";
+  src: url('./InstructureIcons-Line.eot');
+  src: url('./InstructureIcons-Line.eot?#iefix') format('eot'),
+    url('./InstructureIcons-Line.woff') format('woff'),
+    url('./InstructureIcons-Line.ttf') format('truetype'),
+    url('./InstructureIcons-Line.svg#InstructureIcons-Line') format('svg');
+  font-weight: normal;
+  font-style: normal;
+}
+
+.icon-line:before {
+  display: inline-block;
+  font-family: "InstructureIcons-Line";
+  font-style: normal;
+  font-weight: normal;
+  line-height: 1;
+
+  /* Support for all WebKit browsers. */
+  -webkit-font-smoothing: antialiased;
+
+  /* Support for Safari and Chrome. */
+  text-rendering: optimizeLegibility;
+
+  /* Support for Firefox. */
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Support for IE. */
+  font-feature-settings: 'liga';
+}
+
+.icon-line-lg {
+  font-size: 1.3333333333333333em;
+  line-height: 0.75em;
+  vertical-align: -15%;
+}
+.icon-line-2x { font-size: 2em; }
+.icon-line-3x { font-size: 3em; }
+.icon-line-4x { font-size: 4em; }
+.icon-line-5x { font-size: 5em; }
+.icon-line-fw {
+  width: 1.2857142857142858em;
+  text-align: center;
+}
+
+
+  .icon-Arc::before {
+    content: "\EA01";
+  }
+  
+ 
+  .icon-a11y::before {
+    content: "\EA02";
+  }
+  
+ 
+  .icon-add-folder::before {
+    content: "\EA03";
+  }
+  
+ 
+  .icon-add-media::before {
+    content: "\EA04";
+  }
+  
+ 
+  .icon-add::before {
+    content: "\EA05";
+  }
+  
+ 
+  .icon-address-book::before {
+    content: "\EA06";
+  }
+  
+  [dir="rtl"] .icon-address-book::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-admin-tools::before {
+    content: "\EA07";
+  }
+  
+ 
+  .icon-admin::before {
+    content: "\EA08";
+  }
+  
+ 
+  .icon-alerts::before {
+    content: "\EA09";
+  }
+  
+ 
+  .icon-analytics::before {
+    content: "\EA0A";
+  }
+  
+ 
+  .icon-android::before {
+    content: "\EA0B";
+  }
+  
+ 
+  .icon-annotate::before {
+    content: "\EA0C";
+  }
+  
+  [dir="rtl"] .icon-annotate::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-announcement::before {
+    content: "\EA0D";
+  }
+  
+  [dir="rtl"] .icon-announcement::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-apple::before {
+    content: "\EA0E";
+  }
+  
+ 
+  .icon-archive::before {
+    content: "\EA0F";
+  }
+  
+ 
+  .icon-arrow-down::before {
+    content: "\EA10";
+  }
+  
+ 
+  .icon-arrow-end::before {
+    content: "\EA11";
+  }
+  
+  [dir="rtl"] .icon-arrow-end::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-arrow-left::before {
+    content: "\EA12";
+  }
+  
+  [dir="rtl"] .icon-arrow-left::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-arrow-open-down::before {
+    content: "\EA13";
+  }
+  
+ 
+  .icon-arrow-open-end::before {
+    content: "\EA14";
+  }
+  
+  [dir="rtl"] .icon-arrow-open-end::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-arrow-open-left::before {
+    content: "\EA15";
+  }
+  
+  [dir="rtl"] .icon-arrow-open-left::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-arrow-open-right::before {
+    content: "\EA16";
+  }
+  
+  [dir="rtl"] .icon-arrow-open-right::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-arrow-open-start::before {
+    content: "\EA17";
+  }
+  
+  [dir="rtl"] .icon-arrow-open-start::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-arrow-open-up::before {
+    content: "\EA18";
+  }
+  
+ 
+  .icon-arrow-right::before {
+    content: "\EA19";
+  }
+  
+  [dir="rtl"] .icon-arrow-right::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-arrow-start::before {
+    content: "\EA1A";
+  }
+  
+  [dir="rtl"] .icon-arrow-start::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-arrow-up::before {
+    content: "\EA1B";
+  }
+  
+ 
+  .icon-assignment::before {
+    content: "\EA1C";
+  }
+  
+  [dir="rtl"] .icon-assignment::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-attach-media::before {
+    content: "\EA1D";
+  }
+  
+ 
+  .icon-audio-off::before {
+    content: "\EA1E";
+  }
+  
+ 
+  .icon-audio::before {
+    content: "\EA1F";
+  }
+  
+  [dir="rtl"] .icon-audio::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-bank::before {
+    content: "\EA20";
+  }
+  
+ 
+  .icon-blueprint-lock::before {
+    content: "\EA21";
+  }
+  
+ 
+  .icon-blueprint::before {
+    content: "\EA22";
+  }
+  
+ 
+  .icon-bold::before {
+    content: "\EA23";
+  }
+  
+ 
+  .icon-bookmark::before {
+    content: "\EA24";
+  }
+  
+ 
+  .icon-box::before {
+    content: "\EA25";
+  }
+  
+ 
+  .icon-bullet-list-alpha::before {
+    content: "\EA26";
+  }
+  
+ 
+  .icon-bullet-list-circle-outline::before {
+    content: "\EA27";
+  }
+  
+ 
+  .icon-bullet-list-roman::before {
+    content: "\EA28";
+  }
+  
+ 
+  .icon-bullet-list-square::before {
+    content: "\EA29";
+  }
+  
+ 
+  .icon-bullet-list::before {
+    content: "\EA2A";
+  }
+  
+  [dir="rtl"] .icon-bullet-list::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-calculator-desmos::before {
+    content: "\EA2B";
+  }
+  
+ 
+  .icon-calculator::before {
+    content: "\EA2C";
+  }
+  
+ 
+  .icon-calendar-add::before {
+    content: "\EA2D";
+  }
+  
+ 
+  .icon-calendar-clock::before {
+    content: "\EA2E";
+  }
+  
+ 
+  .icon-calendar-day::before {
+    content: "\EA2F";
+  }
+  
+ 
+  .icon-calendar-days::before {
+    content: "\EA30";
+  }
+  
+ 
+  .icon-calendar-month::before {
+    content: "\EA31";
+  }
+  
+ 
+  .icon-calendar-reserved::before {
+    content: "\EA32";
+  }
+  
+ 
+  .icon-certified::before {
+    content: "\EA33";
+  }
+  
+ 
+  .icon-chat::before {
+    content: "\EA34";
+  }
+  
+  [dir="rtl"] .icon-chat::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-check-dark::before {
+    content: "\EA35";
+  }
+  
+ 
+  .icon-check-mark-indeterminate::before {
+    content: "\EA36";
+  }
+  
+ 
+  .icon-check-mark::before {
+    content: "\EA37";
+  }
+  
+ 
+  .icon-check-plus::before {
+    content: "\EA38";
+  }
+  
+ 
+  .icon-check::before {
+    content: "\EA39";
+  }
+  
+ 
+  .icon-circle-arrow-down::before {
+    content: "\EA3A";
+  }
+  
+ 
+  .icon-circle-arrow-up::before {
+    content: "\EA3B";
+  }
+  
+ 
+  .icon-clear-text-formatting::before {
+    content: "\EA3C";
+  }
+  
+ 
+  .icon-clock::before {
+    content: "\EA3D";
+  }
+  
+ 
+  .icon-closed-captioning-off::before {
+    content: "\EA3E";
+  }
+  
+ 
+  .icon-closed-captioning-on::before {
+    content: "\EA3F";
+  }
+  
+ 
+  .icon-closed-captioning::before {
+    content: "\EA40";
+  }
+  
+ 
+  .icon-cloud-download::before {
+    content: "\EA41";
+  }
+  
+ 
+  .icon-cloud-lock::before {
+    content: "\EA42";
+  }
+  
+ 
+  .icon-code::before {
+    content: "\EA43";
+  }
+  
+ 
+  .icon-collapse::before {
+    content: "\EA44";
+  }
+  
+ 
+  .icon-collection-save::before {
+    content: "\EA45";
+  }
+  
+ 
+  .icon-collection::before {
+    content: "\EA46";
+  }
+  
+ 
+  .icon-comment::before {
+    content: "\EA47";
+  }
+  
+ 
+  .icon-comments-off::before {
+    content: "\EA48";
+  }
+  
+ 
+  .icon-comments-on::before {
+    content: "\EA49";
+  }
+  
+ 
+  .icon-commons::before {
+    content: "\EA4A";
+  }
+  
+ 
+  .icon-compass::before {
+    content: "\EA4B";
+  }
+  
+ 
+  .icon-complete::before {
+    content: "\EA4C";
+  }
+  
+ 
+  .icon-compose::before {
+    content: "\EA4D";
+  }
+  
+  [dir="rtl"] .icon-compose::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-copy-course::before {
+    content: "\EA4E";
+  }
+  
+ 
+  .icon-copy::before {
+    content: "\EA4F";
+  }
+  
+ 
+  .icon-courses::before {
+    content: "\EA50";
+  }
+  
+  [dir="rtl"] .icon-courses::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-dashboard::before {
+    content: "\EA51";
+  }
+  
+ 
+  .icon-deactivate-user::before {
+    content: "\EA52";
+  }
+  
+ 
+  .icon-discussion-check::before {
+    content: "\EA53";
+  }
+  
+ 
+  .icon-discussion-new::before {
+    content: "\EA54";
+  }
+  
+ 
+  .icon-discussion-reply-2::before {
+    content: "\EA55";
+  }
+  
+  [dir="rtl"] .icon-discussion-reply-2::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-discussion-reply-dark::before {
+    content: "\EA56";
+  }
+  
+ 
+  .icon-discussion-reply::before {
+    content: "\EA57";
+  }
+  
+ 
+  .icon-discussion-search::before {
+    content: "\EA58";
+  }
+  
+ 
+  .icon-discussion-x::before {
+    content: "\EA59";
+  }
+  
+ 
+  .icon-discussion::before {
+    content: "\EA5A";
+  }
+  
+  [dir="rtl"] .icon-discussion::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-document::before {
+    content: "\EA5B";
+  }
+  
+  [dir="rtl"] .icon-document::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-download::before {
+    content: "\EA5C";
+  }
+  
+ 
+  .icon-drag-handle::before {
+    content: "\EA5D";
+  }
+  
+ 
+  .icon-drop-down::before {
+    content: "\EA5E";
+  }
+  
+ 
+  .icon-duplicate::before {
+    content: "\EA5F";
+  }
+  
+ 
+  .icon-edit::before {
+    content: "\EA60";
+  }
+  
+  [dir="rtl"] .icon-edit::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-educators::before {
+    content: "\EA61";
+  }
+  
+ 
+  .icon-email::before {
+    content: "\EA62";
+  }
+  
+ 
+  .icon-empty::before {
+    content: "\EA63";
+  }
+  
+ 
+  .icon-end::before {
+    content: "\EA64";
+  }
+  
+ 
+  .icon-eportfolio::before {
+    content: "\EA65";
+  }
+  
+ 
+  .icon-equation::before {
+    content: "\EA66";
+  }
+  
+ 
+  .icon-equella::before {
+    content: "\EA67";
+  }
+  
+ 
+  .icon-essay::before {
+    content: "\EA68";
+  }
+  
+  [dir="rtl"] .icon-essay::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-exit-full-screen::before {
+    content: "\EA69";
+  }
+  
+ 
+  .icon-expand-items::before {
+    content: "\EA6A";
+  }
+  
+ 
+  .icon-expand-left::before {
+    content: "\EA6B";
+  }
+  
+  [dir="rtl"] .icon-expand-left::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-expand-start::before {
+    content: "\EA6C";
+  }
+  
+  [dir="rtl"] .icon-expand-start::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-expand::before {
+    content: "\EA6D";
+  }
+  
+ 
+  .icon-export-content::before {
+    content: "\EA6E";
+  }
+  
+  [dir="rtl"] .icon-export-content::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-export::before {
+    content: "\EA6F";
+  }
+  
+  [dir="rtl"] .icon-export::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-external-link::before {
+    content: "\EA70";
+  }
+  
+  [dir="rtl"] .icon-external-link::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-eye::before {
+    content: "\EA71";
+  }
+  
+ 
+  .icon-facebook-boxed::before {
+    content: "\EA72";
+  }
+  
+ 
+  .icon-facebook::before {
+    content: "\EA73";
+  }
+  
+ 
+  .icon-fast-forward::before {
+    content: "\EA74";
+  }
+  
+ 
+  .icon-feedback::before {
+    content: "\EA75";
+  }
+  
+  [dir="rtl"] .icon-feedback::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-file-locked::before {
+    content: "\EA76";
+  }
+  
+ 
+  .icon-files-copyright::before {
+    content: "\EA77";
+  }
+  
+ 
+  .icon-files-creative-commons::before {
+    content: "\EA78";
+  }
+  
+ 
+  .icon-files-fair-use::before {
+    content: "\EA79";
+  }
+  
+ 
+  .icon-files-obtained-permission::before {
+    content: "\EA7A";
+  }
+  
+ 
+  .icon-files-public-domain::before {
+    content: "\EA7B";
+  }
+  
+ 
+  .icon-filmstrip::before {
+    content: "\EA7C";
+  }
+  
+ 
+  .icon-filter::before {
+    content: "\EA7D";
+  }
+  
+ 
+  .icon-flag::before {
+    content: "\EA7E";
+  }
+  
+ 
+  .icon-folder-locked::before {
+    content: "\EA7F";
+  }
+  
+  [dir="rtl"] .icon-folder-locked::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-folder::before {
+    content: "\EA80";
+  }
+  
+  [dir="rtl"] .icon-folder::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-forward::before {
+    content: "\EA81";
+  }
+  
+  [dir="rtl"] .icon-forward::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-full-screen::before {
+    content: "\EA82";
+  }
+  
+ 
+  .icon-github::before {
+    content: "\EA83";
+  }
+  
+ 
+  .icon-gradebook-export::before {
+    content: "\EA84";
+  }
+  
+  [dir="rtl"] .icon-gradebook-export::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-gradebook-import::before {
+    content: "\EA85";
+  }
+  
+  [dir="rtl"] .icon-gradebook-import::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-gradebook::before {
+    content: "\EA86";
+  }
+  
+ 
+  .icon-group-dark-new::before {
+    content: "\EA87";
+  }
+  
+ 
+  .icon-group-new::before {
+    content: "\EA88";
+  }
+  
+ 
+  .icon-group::before {
+    content: "\EA89";
+  }
+  
+ 
+  .icon-hamburger::before {
+    content: "\EA8A";
+  }
+  
+ 
+  .icon-heart::before {
+    content: "\EA8B";
+  }
+  
+ 
+  .icon-highlighter::before {
+    content: "\EA8C";
+  }
+  
+  [dir="rtl"] .icon-highlighter::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-home::before {
+    content: "\EA8D";
+  }
+  
+ 
+  .icon-hour-glass::before {
+    content: "\EA8E";
+  }
+  
+ 
+  .icon-image::before {
+    content: "\EA8F";
+  }
+  
+ 
+  .icon-import-content::before {
+    content: "\EA90";
+  }
+  
+  [dir="rtl"] .icon-import-content::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-import::before {
+    content: "\EA91";
+  }
+  
+  [dir="rtl"] .icon-import::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-inbox::before {
+    content: "\EA92";
+  }
+  
+ 
+  .icon-indent-2::before {
+    content: "\EA93";
+  }
+  
+  [dir="rtl"] .icon-indent-2::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-indent::before {
+    content: "\EA94";
+  }
+  
+  [dir="rtl"] .icon-indent::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-info-borderless::before {
+    content: "\EA95";
+  }
+  
+ 
+  .icon-info::before {
+    content: "\EA96";
+  }
+  
+ 
+  .icon-instructure::before {
+    content: "\EA97";
+  }
+  
+ 
+  .icon-integrations::before {
+    content: "\EA98";
+  }
+  
+ 
+  .icon-invitation::before {
+    content: "\EA99";
+  }
+  
+ 
+  .icon-italic::before {
+    content: "\EA9A";
+  }
+  
+ 
+  .icon-keyboard-shortcuts::before {
+    content: "\EA9B";
+  }
+  
+ 
+  .icon-launch::before {
+    content: "\EA9C";
+  }
+  
+ 
+  .icon-life-preserver::before {
+    content: "\EA9D";
+  }
+  
+ 
+  .icon-like::before {
+    content: "\EA9E";
+  }
+  
+ 
+  .icon-line-reader::before {
+    content: "\EA9F";
+  }
+  
+ 
+  .icon-link::before {
+    content: "\EAA0";
+  }
+  
+ 
+  .icon-linkedin::before {
+    content: "\EAA1";
+  }
+  
+ 
+  .icon-lock::before {
+    content: "\EAA2";
+  }
+  
+ 
+  .icon-lti::before {
+    content: "\EAA3";
+  }
+  
+ 
+  .icon-mark-as-read::before {
+    content: "\EAA4";
+  }
+  
+ 
+  .icon-marker::before {
+    content: "\EAA5";
+  }
+  
+ 
+  .icon-masquerade::before {
+    content: "\EAA6";
+  }
+  
+ 
+  .icon-mastery-paths::before {
+    content: "\EAA7";
+  }
+  
+ 
+  .icon-materials-required-light::before {
+    content: "\EAA8";
+  }
+  
+ 
+  .icon-materials-required::before {
+    content: "\EAA9";
+  }
+  
+ 
+  .icon-mature-light::before {
+    content: "\EAAA";
+  }
+  
+ 
+  .icon-mature::before {
+    content: "\EAAB";
+  }
+  
+ 
+  .icon-media::before {
+    content: "\EAAC";
+  }
+  
+ 
+  .icon-message::before {
+    content: "\EAAD";
+  }
+  
+ 
+  .icon-mic-off::before {
+    content: "\EAAE";
+  }
+  
+ 
+  .icon-mic::before {
+    content: "\EAAF";
+  }
+  
+ 
+  .icon-mini-arrow-down::before {
+    content: "\EAB0";
+  }
+  
+ 
+  .icon-mini-arrow-end::before {
+    content: "\EAB1";
+  }
+  
+  [dir="rtl"] .icon-mini-arrow-end::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-mini-arrow-left::before {
+    content: "\EAB2";
+  }
+  
+  [dir="rtl"] .icon-mini-arrow-left::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-mini-arrow-right::before {
+    content: "\EAB3";
+  }
+  
+  [dir="rtl"] .icon-mini-arrow-right::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-mini-arrow-start::before {
+    content: "\EAB4";
+  }
+  
+  [dir="rtl"] .icon-mini-arrow-start::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-mini-arrow-up::before {
+    content: "\EAB5";
+  }
+  
+ 
+  .icon-minimize::before {
+    content: "\EAB6";
+  }
+  
+ 
+  .icon-module::before {
+    content: "\EAB7";
+  }
+  
+ 
+  .icon-more::before {
+    content: "\EAB8";
+  }
+  
+ 
+  .icon-move-down-bottom::before {
+    content: "\EAB9";
+  }
+  
+ 
+  .icon-move-down::before {
+    content: "\EABA";
+  }
+  
+ 
+  .icon-move-end::before {
+    content: "\EABB";
+  }
+  
+  [dir="rtl"] .icon-move-end::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-move-left::before {
+    content: "\EABC";
+  }
+  
+  [dir="rtl"] .icon-move-left::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-move-right::before {
+    content: "\EABD";
+  }
+  
+  [dir="rtl"] .icon-move-right::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-move-start::before {
+    content: "\EABE";
+  }
+  
+  [dir="rtl"] .icon-move-start::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-move-up-top::before {
+    content: "\EABF";
+  }
+  
+ 
+  .icon-move-up::before {
+    content: "\EAC0";
+  }
+  
+ 
+  .icon-ms-excel::before {
+    content: "\EAC1";
+  }
+  
+ 
+  .icon-ms-ppt::before {
+    content: "\EAC2";
+  }
+  
+ 
+  .icon-ms-word::before {
+    content: "\EAC3";
+  }
+  
+ 
+  .icon-muted::before {
+    content: "\EAC4";
+  }
+  
+ 
+  .icon-next-unread::before {
+    content: "\EAC5";
+  }
+  
+  [dir="rtl"] .icon-next-unread::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-no::before {
+    content: "\EAC6";
+  }
+  
+ 
+  .icon-not-graded::before {
+    content: "\EAC7";
+  }
+  
+  [dir="rtl"] .icon-not-graded::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-note-dark::before {
+    content: "\EAC8";
+  }
+  
+ 
+  .icon-note-light::before {
+    content: "\EAC9";
+  }
+  
+ 
+  .icon-note::before {
+    content: "\EACA";
+  }
+  
+  [dir="rtl"] .icon-note::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-notepad::before {
+    content: "\EACB";
+  }
+  
+ 
+  .icon-numbered-list::before {
+    content: "\EACC";
+  }
+  
+ 
+  .icon-off::before {
+    content: "\EACD";
+  }
+  
+ 
+  .icon-open-folder::before {
+    content: "\EACE";
+  }
+  
+  [dir="rtl"] .icon-open-folder::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-outcomes::before {
+    content: "\EACF";
+  }
+  
+ 
+  .icon-outdent::before {
+    content: "\EAD0";
+  }
+  
+  [dir="rtl"] .icon-outdent::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-outdent2::before {
+    content: "\EAD1";
+  }
+  
+  [dir="rtl"] .icon-outdent2::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-oval-half::before {
+    content: "\EAD2";
+  }
+  
+ 
+  .icon-page-down::before {
+    content: "\EAD3";
+  }
+  
+ 
+  .icon-page-up::before {
+    content: "\EAD4";
+  }
+  
+ 
+  .icon-paint::before {
+    content: "\EAD5";
+  }
+  
+ 
+  .icon-paperclip::before {
+    content: "\EAD6";
+  }
+  
+ 
+  .icon-partial::before {
+    content: "\EAD7";
+  }
+  
+ 
+  .icon-pause::before {
+    content: "\EAD8";
+  }
+  
+ 
+  .icon-pdf::before {
+    content: "\EAD9";
+  }
+  
+ 
+  .icon-peer-graded::before {
+    content: "\EADA";
+  }
+  
+ 
+  .icon-peer-review::before {
+    content: "\EADB";
+  }
+  
+ 
+  .icon-permissions::before {
+    content: "\EADC";
+  }
+  
+ 
+  .icon-pin::before {
+    content: "\EADD";
+  }
+  
+ 
+  .icon-pinterest::before {
+    content: "\EADE";
+  }
+  
+ 
+  .icon-play::before {
+    content: "\EADF";
+  }
+  
+ 
+  .icon-plus::before {
+    content: "\EAE0";
+  }
+  
+ 
+  .icon-post-to-sis::before {
+    content: "\EAE1";
+  }
+  
+ 
+  .icon-prerequisite::before {
+    content: "\EAE2";
+  }
+  
+ 
+  .icon-printer::before {
+    content: "\EAE3";
+  }
+  
+ 
+  .icon-progress::before {
+    content: "\EAE4";
+  }
+  
+ 
+  .icon-protractor::before {
+    content: "\EAE5";
+  }
+  
+ 
+  .icon-publish::before {
+    content: "\EAE6";
+  }
+  
+ 
+  .icon-question::before {
+    content: "\EAE7";
+  }
+  
+ 
+  .icon-quiz-instructions::before {
+    content: "\EAE8";
+  }
+  
+ 
+  .icon-quiz-stats-avg::before {
+    content: "\EAE9";
+  }
+  
+ 
+  .icon-quiz-stats-cronbachs-alpha::before {
+    content: "\EAEA";
+  }
+  
+ 
+  .icon-quiz-stats-deviation::before {
+    content: "\EAEB";
+  }
+  
+ 
+  .icon-quiz-stats-high::before {
+    content: "\EAEC";
+  }
+  
+  [dir="rtl"] .icon-quiz-stats-high::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-quiz-stats-low::before {
+    content: "\EAED";
+  }
+  
+  [dir="rtl"] .icon-quiz-stats-low::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-quiz-stats-time::before {
+    content: "\EAEE";
+  }
+  
+ 
+  .icon-quiz-title::before {
+    content: "\EAEF";
+  }
+  
+ 
+  .icon-quiz::before {
+    content: "\EAF0";
+  }
+  
+  [dir="rtl"] .icon-quiz::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-record::before {
+    content: "\EAF1";
+  }
+  
+ 
+  .icon-refresh::before {
+    content: "\EAF2";
+  }
+  
+ 
+  .icon-remove-bookmark::before {
+    content: "\EAF3";
+  }
+  
+ 
+  .icon-remove-from-collection::before {
+    content: "\EAF4";
+  }
+  
+ 
+  .icon-remove-link::before {
+    content: "\EAF5";
+  }
+  
+ 
+  .icon-replied::before {
+    content: "\EAF6";
+  }
+  
+  [dir="rtl"] .icon-replied::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-reply-2::before {
+    content: "\EAF7";
+  }
+  
+  [dir="rtl"] .icon-reply-2::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-reply-all-2::before {
+    content: "\EAF8";
+  }
+  
+  [dir="rtl"] .icon-reply-all-2::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-reply::before {
+    content: "\EAF9";
+  }
+  
+  [dir="rtl"] .icon-reply::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-reset::before {
+    content: "\EAFA";
+  }
+  
+ 
+  .icon-review-screen::before {
+    content: "\EAFB";
+  }
+  
+ 
+  .icon-rewind::before {
+    content: "\EAFC";
+  }
+  
+ 
+  .icon-rss-add::before {
+    content: "\EAFD";
+  }
+  
+ 
+  .icon-rss::before {
+    content: "\EAFE";
+  }
+  
+ 
+  .icon-rubric-dark::before {
+    content: "\EAFF";
+  }
+  
+  [dir="rtl"] .icon-rubric-dark::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-rubric::before {
+    content: "\EB00";
+  }
+  
+  [dir="rtl"] .icon-rubric::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-ruler::before {
+    content: "\EB01";
+  }
+  
+ 
+  .icon-save::before {
+    content: "\EB02";
+  }
+  
+ 
+  .icon-screen-capture::before {
+    content: "\EB03";
+  }
+  
+ 
+  .icon-search-address-book::before {
+    content: "\EB04";
+  }
+  
+ 
+  .icon-search::before {
+    content: "\EB05";
+  }
+  
+ 
+  .icon-settings-2::before {
+    content: "\EB06";
+  }
+  
+ 
+  .icon-settings::before {
+    content: "\EB07";
+  }
+  
+ 
+  .icon-shape-oval::before {
+    content: "\EB08";
+  }
+  
+ 
+  .icon-shape-polygon::before {
+    content: "\EB09";
+  }
+  
+ 
+  .icon-shape-rectangle::before {
+    content: "\EB0A";
+  }
+  
+ 
+  .icon-share::before {
+    content: "\EB0B";
+  }
+  
+ 
+  .icon-sis-imported::before {
+    content: "\EB0C";
+  }
+  
+  [dir="rtl"] .icon-sis-imported::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-sis-not-synced::before {
+    content: "\EB0D";
+  }
+  
+ 
+  .icon-sis-synced::before {
+    content: "\EB0E";
+  }
+  
+ 
+  .icon-skype::before {
+    content: "\EB0F";
+  }
+  
+ 
+  .icon-sort::before {
+    content: "\EB10";
+  }
+  
+ 
+  .icon-speed-grader::before {
+    content: "\EB11";
+  }
+  
+ 
+  .icon-standards::before {
+    content: "\EB12";
+  }
+  
+ 
+  .icon-star-light::before {
+    content: "\EB13";
+  }
+  
+ 
+  .icon-star::before {
+    content: "\EB14";
+  }
+  
+ 
+  .icon-stats::before {
+    content: "\EB15";
+  }
+  
+ 
+  .icon-stop::before {
+    content: "\EB16";
+  }
+  
+ 
+  .icon-strikethrough::before {
+    content: "\EB17";
+  }
+  
+ 
+  .icon-student-view::before {
+    content: "\EB18";
+  }
+  
+ 
+  .icon-studio::before {
+    content: "\EB19";
+  }
+  
+ 
+  .icon-subaccounts::before {
+    content: "\EB1A";
+  }
+  
+ 
+  .icon-syllabus::before {
+    content: "\EB1B";
+  }
+  
+  [dir="rtl"] .icon-syllabus::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-table-cell-select-all::before {
+    content: "\EB1C";
+  }
+  
+ 
+  .icon-table-delete-column::before {
+    content: "\EB1D";
+  }
+  
+ 
+  .icon-table-delete-row::before {
+    content: "\EB1E";
+  }
+  
+ 
+  .icon-table-delete-table::before {
+    content: "\EB1F";
+  }
+  
+ 
+  .icon-table-insert-column-after::before {
+    content: "\EB20";
+  }
+  
+ 
+  .icon-table-insert-column-before::before {
+    content: "\EB21";
+  }
+  
+ 
+  .icon-table-insert-row-above::before {
+    content: "\EB22";
+  }
+  
+ 
+  .icon-table-insert-row-after::before {
+    content: "\EB23";
+  }
+  
+ 
+  .icon-table-left-header::before {
+    content: "\EB24";
+  }
+  
+ 
+  .icon-table-merge-cells::before {
+    content: "\EB25";
+  }
+  
+ 
+  .icon-table-row-properties::before {
+    content: "\EB26";
+  }
+  
+ 
+  .icon-table-split-cells::before {
+    content: "\EB27";
+  }
+  
+ 
+  .icon-table-top-header::before {
+    content: "\EB28";
+  }
+  
+ 
+  .icon-table::before {
+    content: "\EB29";
+  }
+  
+ 
+  .icon-tag::before {
+    content: "\EB2A";
+  }
+  
+ 
+  .icon-target::before {
+    content: "\EB2B";
+  }
+  
+ 
+  .icon-text-background-color::before {
+    content: "\EB2C";
+  }
+  
+ 
+  .icon-text-centered::before {
+    content: "\EB2D";
+  }
+  
+ 
+  .icon-text-color::before {
+    content: "\EB2E";
+  }
+  
+ 
+  .icon-text-direction-ltr::before {
+    content: "\EB2F";
+  }
+  
+ 
+  .icon-text-direction-rtl::before {
+    content: "\EB30";
+  }
+  
+ 
+  .icon-text-end::before {
+    content: "\EB31";
+  }
+  
+  [dir="rtl"] .icon-text-end::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-text-left::before {
+    content: "\EB32";
+  }
+  
+  [dir="rtl"] .icon-text-left::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-text-right::before {
+    content: "\EB33";
+  }
+  
+  [dir="rtl"] .icon-text-right::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-text-start::before {
+    content: "\EB34";
+  }
+  
+  [dir="rtl"] .icon-text-start::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-text-subscript::before {
+    content: "\EB35";
+  }
+  
+ 
+  .icon-text-superscript::before {
+    content: "\EB36";
+  }
+  
+ 
+  .icon-text::before {
+    content: "\EB37";
+  }
+  
+ 
+  .icon-textarea::before {
+    content: "\EB38";
+  }
+  
+  [dir="rtl"] .icon-textarea::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-timer::before {
+    content: "\EB39";
+  }
+  
+ 
+  .icon-toggle-end::before {
+    content: "\EB3A";
+  }
+  
+  [dir="rtl"] .icon-toggle-end::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-toggle-left::before {
+    content: "\EB3B";
+  }
+  
+  [dir="rtl"] .icon-toggle-left::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-toggle-right::before {
+    content: "\EB3C";
+  }
+  
+  [dir="rtl"] .icon-toggle-right::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-toggle-start::before {
+    content: "\EB3D";
+  }
+  
+  [dir="rtl"] .icon-toggle-start::before {
+    transform: scale3d(-1, 1, 1);
+  }
+  
+ 
+  .icon-trash::before {
+    content: "\EB3E";
+  }
+  
+ 
+  .icon-trouble::before {
+    content: "\EB3F";
+  }
+  
+ 
+  .icon-twitter-boxed::before {
+    content: "\EB40";
+  }
+  
+ 
+  .icon-twitter::before {
+    content: "\EB41";
+  }
+  
+ 
+  .icon-unarchive::before {
+    content: "\EB42";
+  }
+  
+ 
+  .icon-underline::before {
+    content: "\EB43";
+  }
+  
+ 
+  .icon-unlock::before {
+    content: "\EB44";
+  }
+  
+ 
+  .icon-unmuted::before {
+    content: "\EB45";
+  }
+  
+ 
+  .icon-unpublish::before {
+    content: "\EB46";
+  }
+  
+ 
+  .icon-unpublished::before {
+    content: "\EB47";
+  }
+  
+ 
+  .icon-updown::before {
+    content: "\EB48";
+  }
+  
+ 
+  .icon-upload::before {
+    content: "\EB49";
+  }
+  
+ 
+  .icon-user-add::before {
+    content: "\EB4A";
+  }
+  
+ 
+  .icon-user::before {
+    content: "\EB4B";
+  }
+  
+ 
+  .icon-video-camera-off::before {
+    content: "\EB4C";
+  }
+  
+ 
+  .icon-video-camera::before {
+    content: "\EB4D";
+  }
+  
+ 
+  .icon-video::before {
+    content: "\EB4E";
+  }
+  
+ 
+  .icon-warning-borderless::before {
+    content: "\EB4F";
+  }
+  
+ 
+  .icon-warning::before {
+    content: "\EB50";
+  }
+  
+ 
+  .icon-windows::before {
+    content: "\EB51";
+  }
+  
+ 
+  .icon-wordpress::before {
+    content: "\EB52";
+  }
+  
+ 
+  .icon-x::before {
+    content: "\EB53";
+  }
+  
+ 
+  .icon-zipped::before {
+    content: "\EB54";
+  }
+  
+ 
+  .icon-zoom-in::before {
+    content: "\EB55";
+  }
+  
+ 
+  .icon-zoom-out::before {
+    content: "\EB56";
+  }
+  
+ 
