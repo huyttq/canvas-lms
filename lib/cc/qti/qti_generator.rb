@@ -211,6 +211,7 @@ module CC
           q_node.disable_timer_autosubmission quiz.disable_timer_autosubmission unless quiz.disable_timer_autosubmission.nil?
           q_node.allowed_attempts quiz.allowed_attempts unless quiz.allowed_attempts.nil?
           q_node.one_question_at_a_time quiz.one_question_at_a_time?
+          q_node.require_physical_signature quiz.require_physical_signature?
           q_node.cant_go_back quiz.cant_go_back?
           q_node.available quiz.available?
           q_node.one_time_results quiz.one_time_results?

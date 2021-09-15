@@ -69,6 +69,7 @@ module CC::Importer::Canvas
         one_time_results
         show_correct_answers_last_attempt
         only_visible_to_overrides
+        require_physical_signature
       ).each do |bool_val|
         val = get_bool_val(doc, bool_val)
         quiz[bool_val] = val unless val.nil?
