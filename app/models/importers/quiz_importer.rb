@@ -212,6 +212,7 @@ module Importers
         anonymous_submissions
         could_be_locked
         quiz_type
+        require_physical_signature
         one_question_at_a_time
         cant_go_back
         require_lockdown_browser_monitor

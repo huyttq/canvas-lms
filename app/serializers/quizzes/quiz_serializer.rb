@@ -37,6 +37,7 @@ module Quizzes
                 :speed_grader_url, :permissions, :quiz_reports_url, :quiz_statistics_url,
                 :message_students_url, :quiz_submission_html_url, :section_count,
                 :moderate_url, :take_quiz_url, :quiz_extensions_url,
+                :require_physical_signature,
                 # :takeable,
                 :quiz_submissions_zip_url, :preview_url, :quiz_submission_versions_html_url,
                 :assignment_id, :one_time_results, :only_visible_to_overrides,
