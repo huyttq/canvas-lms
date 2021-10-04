@@ -694,6 +694,42 @@ equation: <img class="equation_image" title="Log_216" src="/equation_images/Log_
       expect(qq.question_data['question_text']).to eq data[:question_text]
     end
 
+    it "should copy illustrating_question" do
+      bank = @copy_from.assessment_question_banks.create!(:title => 'Test Bank')
+      data = {:question_type => "illustrating_question",
+              :points_possible => 10,
+              :question_text => "<strong>html for fun</strong>",
+              :illustrating_background_url => "http://localhost/somefile",
+              :kson_data => '{"attrs": {}}'
+              }.with_indifferent_access
+      bank.assessment_questions.create!(:question_data => data)
+
+      q = @copy_from.quizzes.create!(:title => "incident report", :quiz_type => "assignment")
+      q.quiz_questions.create!(:question_data => data)
+      q.generate_quiz_data
+      q.published_at = Time.now
+      q.workflow_state = 'available'
+      q.save!
+
+      run_course_copy
+
+      expect(@copy_to.assessment_questions.count).to eq 2
+      @copy_to.assessment_questions.each do |aq|
+        expect(aq.question_data['question_type']).to eq data[:question_type]
+        expect(aq.question_data['question_text']).to eq data[:question_text]
+      end
+
+      expect(@copy_to.quizzes.count).to eq 1
+      quiz = @copy_to.quizzes.first
+      expect(quiz.active_quiz_questions.size).to eq 1
+
+      qq = quiz.active_quiz_questions.first
+      expect(qq.question_data['question_type']).to eq data[:question_type]
+      expect(qq.question_data['question_text']).to eq data[:question_text]
+      expect(qq.question_data['kson_data']).to eq data[:kson_data]
+      expect(qq.question_data['illustrating_background_url']).to eq data[:illustrating_background_url]
+    end
+
     it "should leave text answers as text" do
       @bank = @copy_from.assessment_question_banks.create!(:title => 'Test Bank')
       data = {

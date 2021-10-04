@@ -121,6 +121,12 @@ module CC
                 if question[:is_quiz_question]
                   meta_field(qm_node, 'assessment_question_identifierref', aq_mig_id(question))
                 end
+
+                if question['question_type'] == 'illustrating_question'
+                  Rails.logger.debug "###########set illustration_question custom metadata #{question.inspect}"
+                  meta_field(qm_node, 'kson_data', question['kson_data'])
+                  meta_field(qm_node, 'illustrating_background_url', question['illustrating_background_url'])
+                end
               end
             end
           end # meta data
