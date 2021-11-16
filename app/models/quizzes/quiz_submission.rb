@@ -199,12 +199,10 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
                 q_key = find_matching_key(multiple_answer_keys, qid_guid)
                 new_submission_data[qid_guid] = question_submission[q_key] unless q_key.nil?
               }
-
-            elsif question_def["question_type"] == 'multiple_answers_question'
+            elsif question_def["question_type"] == 'multiple_answers_question' || question_def["question_type"] == 'matching_question'
               # {"correct"=>true, "points"=>1.0, "question_id"=>12, "text"=>"", "answer_208"=>"1", "answer_4976"=>"0", "answer_4019"=>"1", "answer_8312"=>"0"}
               multiple_answer_keys = question_submission.keys.select {|i| i.start_with? 'answer_'}
               multiple_answer_keys.each {|k| new_submission_data[qid + '_' + k] = question_submission[k].to_i}
-
             elsif question_def["question_type"] == 'file_upload_question'
               new_submission_data[qid] = question_submission['attachment_ids']
             else
