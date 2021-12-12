@@ -237,7 +237,10 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
         end
       }
     rescue => e
-      logger.error "cannot generate temporary data #{e.inspect}"
+      logger.error "#SUBMISSION_ERROR# cannot generate temporary data #{e.inspect} #{e.backtrace}"
+      logger.error "#SUBMISSION_ERROR# self.submission_data #{self.submission_data.inspect}"
+      logger.error "#SUBMISSION_ERROR# self.quiz_data #{self.quiz_data.inspect}"
+      logger.error "#SUBMISSION_ERROR# new_submission_data #{new_submission_data.inspect}"
     end
 
     logger.debug "#############################RESULT AFTER mod: #{new_submission_data.inspect}"
