@@ -46,35 +46,35 @@ module Canvas
       def message
         msg = +""
         ActiveSupport::Deprecation.silence do
-          msg << "\n\n[CANVAS_ERRORS] EXCEPTION LOG"
+          msg << "\r\r[CANVAS_ERRORS] EXCEPTION LOG"
           if @ex.is_a?(String) || @ex.is_a?(Symbol)
-            msg << "\n#{@ex}\n"
+            msg << "\r#{@ex}\r"
           else
             msg << log_entry_for_exception(@ex)
             caused_by = @ex.try(:cause)
             while caused_by.present?
-              msg << "\n****Caused By****\n"
+              msg << "\r****Caused By****\r"
               msg << log_entry_for_exception(caused_by)
               caused_by = caused_by.cause
             end
           end
-          msg << "CONTEXT: #{@data}\n\n"
+          msg << "CONTEXT: #{@data}\r\r"
         end
         msg
       end
 
       def log_entry_for_exception(e)
         entry = +""
-        entry << "\n#{e.class}"
+        entry << "\r#{e.class}"
         begin
           entry << " (#{e.message}):" if e.respond_to?(:message)
         rescue StandardError => new_err
-          entry << "\n***[WARNING]: Unable to extract error message due to #{new_err}"
+          entry << "\r***[WARNING]: Unable to extract error message due to #{new_err}"
         end
-        entry << "\n"
+        entry << "\r"
         entry << e.annoted_source_code.to_s if e.respond_to?(:annoted_source_code)
         if e.respond_to?(:backtrace)
-          b_trace = e.backtrace&.join("\n  ")
+          b_trace = e.backtrace&.join("\r  ")
           entry << "  " << b_trace if b_trace
         end
         entry
