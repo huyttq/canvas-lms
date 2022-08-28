@@ -148,9 +148,14 @@
   </div>
   <div class=form-actions>
     <span id="last_saved_indicator"><%= t("not_saved", "Not saved") %></span>
-    <button type="submit" class="btn submit_button quiz_submit btn-secondary" id="submit_quiz_button" data-action="<%= @quiz_presenter.submit_form_action(session, @current_user) %>">
-      <%= t('buttons.submit_quiz', "Submit Quiz") %>
-    </button>
+    <% if @submission.did_not_attend_training %>
+      <br/>
+      <span>You are not allowed to submit, please contact administrator for help</span>
+    <% else %>
+      <button type="submit" class="btn submit_button quiz_submit btn-secondary" id="submit_quiz_button" data-action="<%= @quiz_presenter.submit_form_action(session, @current_user) %>">
+        <%= t('buttons.submit_quiz', "Submit Quiz") %>
+      </button>
+    <% end %>
   </div>
 
   <% end %>

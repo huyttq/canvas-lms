@@ -59,6 +59,11 @@ class Quizzes::QuizSubmissionsController < ApplicationController
         end
       end
 
+      if @submission.did_not_attend_training
+        flash[:error] = t('errors.invalid_submissions', "You are not allowed to submit, please contact administrator for help")
+        return redirect_to course_quiz_url(@context, @quiz, previewing_params)
+      end
+
       if @submission.require_physical_signature? && !@submission.has_student_signature? && !params[:signature]
         flash[:error] = t('errors.invalid_submissions', "This quiz submission require valid signature")
         return redirect_to course_quiz_url(@context, @quiz, previewing_params)
