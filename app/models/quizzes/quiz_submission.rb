@@ -192,14 +192,24 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
         if (is_correct)
           new_submission_data[qid + '_locked'] = "true" # hide it from user so he/she cannot update correct answers
           if should_copy_answer
-            if question_def["question_type"] == 'multiple_dropdowns_question'
+            if question_def["question_type"] == 'multiple_dropdowns_question' ||
+              question_def["question_type"] == 'fill_in_multiple_blanks_question'
+
               question_guids = question_def["question_text"].scan /#{qid}_\S{32}/
               multiple_answer_keys = question_submission.keys.select {|i| i.start_with? 'answer_id_for_'}
               question_guids.each { |qid_guid|
                 q_key = find_matching_key(multiple_answer_keys, qid_guid)
-                new_submission_data[qid_guid] = question_submission[q_key] unless q_key.nil?
+                unless q_key.nil?
+                  if question_def["question_type"] == 'fill_in_multiple_blanks_question'
+                    answer = question_def["answers"].find {|q| q["id"] == question_submission[q_key]}
+                    new_submission_data[qid_guid] = answer["text"]
+                  else
+                    new_submission_data[qid_guid] = question_submission[q_key]
+                  end
+                end
               }
-            elsif question_def["question_type"] == 'multiple_answers_question' || question_def["question_type"] == 'matching_question'
+            elsif question_def["question_type"] == 'multiple_answers_question' ||
+                  question_def["question_type"] == 'matching_question'
               # {"correct"=>true, "points"=>1.0, "question_id"=>12, "text"=>"", "answer_208"=>"1", "answer_4976"=>"0", "answer_4019"=>"1", "answer_8312"=>"0"}
               multiple_answer_keys = question_submission.keys.select {|i| i.start_with? 'answer_'}
               multiple_answer_keys.each {|k| new_submission_data[qid + '_' + k] = question_submission[k].to_i}
@@ -214,7 +224,9 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
           # marked all unsatisfactory/unanswered questions
           new_submission_data[qid + '_marked'] = "true"
           if should_copy_answer
-            if question_def["question_type"] == 'multiple_dropdowns_question'
+            if question_def["question_type"] == 'multiple_dropdowns_question' ||
+              question_def["question_type"] == 'fill_in_multiple_blanks_question'
+
               answers = question_def["answers"]
 
               question_guids = question_def["question_text"].scan /#{qid}_\S{32}/
@@ -226,7 +238,7 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
                   answer = answers.find {|q| q["id"] == answer_id}
 
                   if answer["weight"] == 100.0 && new_submission_data[qid_guid].nil? #IMPORTANT: do not override auto-save user answers
-                    new_submission_data[qid_guid] = answer_id
+                    new_submission_data[qid_guid] = question_def["question_type"] == 'fill_in_multiple_blanks_question' ? answer["text"] : answer_id
                   end
                 end
               }
