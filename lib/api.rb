@@ -296,7 +296,7 @@ module Api
 
   def self.max_per_page(action = nil)
     result = Setting.get("api_max_per_page_#{action}", nil)&.to_i if action
-    result || Setting.get('api_max_per_page', '50').to_i
+    result || Setting.get('api_max_per_page', '100').to_i
   end
 
   def self.per_page(action = nil)
