@@ -301,7 +301,7 @@ module Api
 
   def self.per_page(action = nil)
     result = Setting.get("api_per_page_#{action}", nil)&.to_i if action
-    result || Setting.get('api_per_page', '10').to_i
+    result || Setting.get('api_per_page', '100').to_i
   end
 
   def self.per_page_for(controller, options={})
