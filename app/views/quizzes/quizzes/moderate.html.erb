@@ -51,7 +51,7 @@
       <th scope="col" style="<%= hidden if @quiz.allowed_attempts < 0 %>"><%= t('headers.attempts_left', "Attempts Left") %></th>
       <th scope='col'><%= t('headers.score', "Score") %></th>
       <% manually_unlocked_title = t('titles.manually_unlocked', "Manually Unlocked") %>
-      <% did_not_attend_training_title = t('titles.did_not_attend_training', "Did NOT Attend Training") %>
+      <% did_not_attend_training_title = t('titles.did_not_attend_training', "Did NOT Attend Training Class / Assignment Day") %>
       <th scope="col" class="unlocked_col"><span class="screenreader-only"><%= manually_unlocked_title %></span>&nbsp;</th>
       <th scope="col" class="edit">
         <a href="#" class="reload_link" role="button"><%= image_tag "ajax-reload.gif", alt: t(:reload_student_table, "Reload student table") %></a>
