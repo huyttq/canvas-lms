@@ -54,7 +54,21 @@ function success(target) {
 }
 
 ready(() => {
-  $('[data-favorite-url]').on('click keyclick', function(event) {
+  $('#course_filter_text').keyup(function () {
+    const filter = $('#course_filter_text').val()
+    const titleCols = $('td.course-list-course-title-column span.name')
+
+    for (let idx = 0; idx < titleCols.length; idx++) {
+      const col = titleCols[idx]
+      if (filter.length === 0 || col.textContent.toLowerCase().indexOf(filter.toLowerCase()) > -1) {
+        $(col.parentNode.parentNode.parentNode).show()
+      } else {
+        $(col.parentNode.parentNode.parentNode).hide()
+      }
+    }
+  })
+
+  $('[data-favorite-url]').on('click keyclick', function (event) {
     event.preventDefault()
     const url = $(this).data('favoriteUrl')
     const target = $(event.currentTarget)
