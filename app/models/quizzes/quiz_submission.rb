@@ -255,7 +255,11 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
       logger.error "#SUBMISSION_ERROR# new_submission_data #{new_submission_data.inspect}"
     end
 
-    logger.debug "#############################RESULT AFTER mod: #{new_submission_data.inspect}"
+    logger.info "#############################RESULT AFTER mod: #{new_submission_data.inspect}"
+    if new_submission_data.empty?
+      logger.warn "#SUBMISSION_WARN# self.submission_data #{self.submission_data.inspect}"
+      logger.warn "#SUBMISSION_WARN# self.quiz_data #{self.quiz_data.inspect}"
+    end
     return new_submission_data
   end
 
