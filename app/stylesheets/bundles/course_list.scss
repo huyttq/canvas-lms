@@ -36,13 +36,13 @@
 .course-list-published-column {
     width: 7%;
   }
-  .course-list-nickname-column {
-    width: 25%;
-  }
+  // .course-list-nickname-column {
+  //   width: 25%;
+  // }
   .course-list-course-title-column,
   .course-list-not-favoritable,
   .course-list-group-column {
-    width: 35%;
+    width: 60%;
   }
   .course-list-no-left-border {
     border-#{direction(left)}: 0;
@@ -52,11 +52,11 @@
   }
 }
 
-.course-list-table td {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+// .course-list-table td {
+//   white-space: nowrap;
+//   overflow: hidden;
+//   text-overflow: ellipsis;
+// }
 
 .course-list-favorite-course {
   color: $ic-color-alert;

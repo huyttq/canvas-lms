@@ -78,10 +78,6 @@
         <% end %>
       </td>
 
-      <td class="course-list-no-left-border course-list-nickname-column">
-        <%= current_enrollment.course.nickname_for(@current_user, nil) %>
-      </td>
-
       <td class="course-list-no-left-border course-list-term-column">
       <% if current_enrollment.course.enrollment_term.default_term? %>
         <span class="screenreader-only"><%= current_enrollment.course.enrollment_term.name %></span>
