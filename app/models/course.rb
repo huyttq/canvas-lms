@@ -3103,12 +3103,13 @@ class Course < ActiveRecord::Base
 
       # remove tabs that the user doesn't have access to
       unless opts[:for_reordering]
-        delete_unless.call([TAB_HOME, TAB_ANNOUNCEMENTS, TAB_PAGES, TAB_OUTCOMES, TAB_CONFERENCES, TAB_COLLABORATIONS, TAB_MODULES], :read, :manage_content)
+        delete_unless.call([TAB_HOME, TAB_ANNOUNCEMENTS, TAB_PAGES, TAB_OUTCOMES, TAB_CONFERENCES, TAB_COLLABORATIONS], :read, :manage_content)
 
         member_only_tabs = tabs.select{ |t| t[:visibility] == 'members' }
         tabs -= member_only_tabs if member_only_tabs.present? && !check_for_permission.call(:participate_as_student, :read_as_admin)
 
-        delete_unless.call([TAB_ASSIGNMENTS, TAB_QUIZZES], :read, :manage_content, :manage_assignments)
+        delete_unless.call([TAB_ASSIGNMENTS], :read, :manage_content, :manage_assignments)
+        delete_unless.call([TAB_QUIZZES, TAB_MODULES], :manage_content, :manage_assignments)
         delete_unless.call([TAB_SYLLABUS], :read, :read_syllabus, :manage_content, :manage_assignments)
 
         admin_only_tabs = tabs.select{ |t| t[:visibility] == 'admins' }
