@@ -176,19 +176,19 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
   def merge_submission_data(new_submission_data)
     #IMPORTANT: only copy answers from last attempt when user taking the quiz (not resuming)
     should_copy_answer = new_submission_data.empty?
-    begin
-      self.submission_data.each { |tmp|
-        #tmp {:correct=>true, :points=>1.0, :question_id=>13, :text=>"", :answer_for_question1=>2703, :answer_id_for_question1=>2703, :answer_for_question2=>3305, :answer_id_for_question2=>3305}
-        # multiple choice question use symbol not string
-        question_submission = tmp.stringify_keys
-        # logger.debug "----------tmp.stringify_keys: #{tmp.inspect}"
+    self.submission_data.each { |tmp|
+      #tmp {:correct=>true, :points=>1.0, :question_id=>13, :text=>"", :answer_for_question1=>2703, :answer_id_for_question1=>2703, :answer_for_question2=>3305, :answer_id_for_question2=>3305}
+      # multiple choice question use symbol not string
+      question_submission = tmp.stringify_keys
+      # logger.debug "----------tmp.stringify_keys: #{tmp.inspect}"
 
-        question_def = self.quiz_data.find {|q| q["id"] == question_submission["question_id"]}
-        # logger.debug "----------question_def: #{question_def.inspect}"
+      question_def = self.quiz_data.find {|q| q["id"] == question_submission["question_id"]}
+      # logger.debug "----------question_def: #{question_def.inspect}"
 
-        qid = 'question_' + question_submission["question_id"].to_s
-        is_correct = question_submission["correct"] == true || question_submission["points"] >= question_def["points_possible"]
+      qid = 'question_' + question_submission["question_id"].to_s
+      is_correct = question_submission["correct"] == true || question_submission["points"] >= question_def["points_possible"]
 
+      begin
         if (is_correct)
           new_submission_data[qid + '_locked'] = "true" # hide it from user so he/she cannot update correct answers
           if should_copy_answer
@@ -236,9 +236,11 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
                 unless q_key.nil?
                   answer_id = question_submission[q_key]
                   answer = answers.find {|q| q["id"] == answer_id}
-
-                  if answer["weight"] == 100.0 && new_submission_data[qid_guid].nil? #IMPORTANT: do not override auto-save user answers
-                    new_submission_data[qid_guid] = question_def["question_type"] == 'fill_in_multiple_blanks_question' ? answer["text"] : answer_id
+                  # NOTE: wrong answer of fill_in_multiple_blanks_question won't have answer_id value, for ex: {:answer_for_Answer1=>"Fact", :answer_id_for_Answer1=>nil}
+                  unless answer.nil?
+                    if answer["weight"] == 100.0 && new_submission_data[qid_guid].nil? #IMPORTANT: do not override auto-save user answers
+                      new_submission_data[qid_guid] = question_def["question_type"] == 'fill_in_multiple_blanks_question' ? answer["text"] : answer_id
+                    end
                   end
                 end
               }
@@ -247,13 +249,13 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
             end
           end
         end
-      }
-    rescue => e
-      logger.error "#SUBMISSION_ERROR# cannot generate temporary data #{e.inspect} #{e.backtrace}"
-      logger.error "#SUBMISSION_ERROR# self.submission_data #{self.submission_data.inspect}"
-      logger.error "#SUBMISSION_ERROR# self.quiz_data #{self.quiz_data.inspect}"
-      logger.error "#SUBMISSION_ERROR# new_submission_data #{new_submission_data.inspect}"
-    end
+      rescue => e
+        logger.error "#SUBMISSION_ERROR# cannot generate temporary data #{e.inspect} #{e.backtrace}"
+        logger.error "#SUBMISSION_ERROR# question_submission #{question_submission.inspect}"
+        logger.error "#SUBMISSION_ERROR# question_def #{question_def.inspect}"
+        logger.error "#SUBMISSION_ERROR# new_submission_data #{new_submission_data.inspect}"
+      end
+    }
 
     logger.info "#############################RESULT AFTER mod: #{new_submission_data.inspect}"
     if new_submission_data.empty?
