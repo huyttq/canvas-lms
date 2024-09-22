@@ -234,12 +234,15 @@ class Quizzes::QuizSubmission < ActiveRecord::Base
               question_guids.each { |qid_guid|
                 q_key = find_matching_key(multiple_answer_keys, qid_guid)
                 unless q_key.nil?
+                  # NOTE: wrong answer won't have answer_id value,
+                  # for ex: question_submission = {:answer_for_Answer1=>"Fact", :answer_id_for_Answer1=>nil}
                   answer_id = question_submission[q_key]
-                  answer = answers.find {|q| q["id"] == answer_id}
-                  # NOTE: wrong answer of fill_in_multiple_blanks_question won't have answer_id value, for ex: {:answer_for_Answer1=>"Fact", :answer_id_for_Answer1=>nil}
-                  unless answer.nil?
-                    if answer["weight"] == 100.0 && new_submission_data[qid_guid].nil? #IMPORTANT: do not override auto-save user answers
-                      new_submission_data[qid_guid] = question_def["question_type"] == 'fill_in_multiple_blanks_question' ? answer["text"] : answer_id
+                  unless answer_id.nil?
+                    answer = answers.find {|q| q["id"] == answer_id}
+                    unless answer.nil?
+                      if answer["weight"] == 100.0 && new_submission_data[qid_guid].nil? #IMPORTANT: do not override auto-save user answers
+                        new_submission_data[qid_guid] = question_def["question_type"] == 'fill_in_multiple_blanks_question' ? answer["text"] : answer_id
+                      end
                     end
                   end
                 end
