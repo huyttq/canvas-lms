@@ -284,6 +284,12 @@ window.modules = (function() {
                   points: I18n.n(info.points_possible)
                 })
               }
+              if (info.unlock_at != null) {
+                data.unlock_at_display = $.datetimeString(info.unlock_at)
+                if (info.lock_at != null) {
+                  data.unlock_at_display += ' - ' + $.datetimeString(info.lock_at)
+                }
+              }
               if (info.todo_date != null) {
                 data.due_date_display = $.dateString(info.todo_date)
               } else if (info.due_date != null) {
@@ -303,12 +309,15 @@ window.modules = (function() {
               }
               $context_module_item.fillTemplateData({
                 data,
-                htmlValues: ['points_possible_display']
+                htmlValues: ['points_possible_display', 'unlock_at_display']
               })
 
               // clean up empty elements so they don't show borders in updated item group design
               if (info.points_possible === null) {
                 $context_module_item.find('.points_possible_display').remove()
+              }
+              if (info.unlock_at === null) {
+                $context_module_item.find('.unlock_at_display').remove()
               }
 
               if (info.mc_objectives) {

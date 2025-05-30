@@ -261,6 +261,8 @@ module DatesOverridable
       hash
     end
     tag_info[:points_possible] = self.points_possible
+    tag_info[:unlock_at] = self.unlock_at
+    tag_info[:lock_at] = self.lock_at
 
     if user && tag_info[:due_date]
       if tag_info[:due_date] < Time.now
