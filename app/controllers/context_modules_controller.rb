@@ -650,6 +650,17 @@ class ContextModulesController < ApplicationController
         return render :json => @tag.errors, :status => :bad_request
       end
 
+      if params[:content_tag]
+        @tag.assignment.unlock_at = params[:content_tag][:unlock_at]
+        @tag.assignment.lock_at = params[:content_tag][:lock_at]
+        logger.debug "############## ContextModulesController update_item"
+        logger.debug @tag.assignment.inspect
+
+        unless @tag.assignment.save
+          return render :json => @tag.assignment.errors, :status => :bad_request
+        end
+      end
+
       @tag.update_asset_name!(@current_user) if params[:content_tag][:title]
       render :json => @tag
     end

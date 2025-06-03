@@ -156,6 +156,34 @@
             </select>
           </td>
         </tr>
+        <tr>
+          <td><label for="assignment_unlock_at_date_picker">Unlock at</label></td>
+          <td>
+            <div class="date_field_container">
+              <input
+                id="assignment_unlock_at_date_picker"
+                class="datetime_field input-medium"
+                type="text"
+                name="content_tag[unlock_at]"
+                data-tooltip
+              />
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td><label for="assignment_lock_at_date_picker">Lock at</label></td>
+          <td>
+            <div class="date_field_container">
+              <input
+                id="assignment_lock_at_date_picker"
+                class="datetime_field input-medium"
+                type="text"
+                name="content_tag[lock_at]"
+                data-tooltip
+              />
+            </div>
+          </td>
+        </tr>
         <tr class="external">
           <td colspan="2">
             <%= f.check_box :new_tab %>
